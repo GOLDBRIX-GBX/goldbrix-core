@@ -126,6 +126,7 @@ struct Params {
     int nV31ForkHeight{0};             // 0 = V31 disabled, else activation block
     int nV31HalvingInterval{0};        // Post-fork halving interval
     int64_t nV31InitialSubsidy{0};     // Post-fork initial reward (satoshi)
+    int nMaxReorgDepth{0};             // 0=disabled; max reorg depth (finality)
     std::chrono::seconds PowTargetSpacing() const
     {
         return std::chrono::seconds{nPowTargetSpacing};

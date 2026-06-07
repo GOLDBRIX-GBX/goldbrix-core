@@ -3282,6 +3282,15 @@ CBlockIndex* Chainstate::FindMostWorkChain()
             }
             pindexTest = pindexTest->pprev;
         }
+        // GBX finality: refuse candidates that would reorg deeper than nMaxReorgDepth
+        if (!fInvalidAncestor && pindexTest && m_chain.Tip() && !m_chain.Contains(pindexNew)
+            && m_chainman.GetConsensus().nMaxReorgDepth > 0) {
+            int forkDepth = m_chain.Tip()->nHeight - pindexTest->nHeight;
+            if (forkDepth > m_chainman.GetConsensus().nMaxReorgDepth) {
+                LogInfo("GBX finality: refusing reorg depth %d > max %d", forkDepth, m_chainman.GetConsensus().nMaxReorgDepth);
+                return m_chain.Tip();
+            }
+        }
         if (!fInvalidAncestor)
             return pindexNew;
     } while(true);

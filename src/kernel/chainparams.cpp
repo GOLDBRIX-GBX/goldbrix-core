@@ -112,6 +112,7 @@ public:
         consensus.nLwmaTargetSpacing = 3;  // V31: 3s blocks (was 120s)
         consensus.nV31ForkHeight = 20000;
         consensus.nV31HalvingInterval = 28000000;
+        consensus.nMaxReorgDepth = 100;
         consensus.nV31InitialSubsidy = 25000000; // 0.25 GBX = 25M satoshi
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.enforce_BIP94 = false;
@@ -558,6 +559,7 @@ public:
         // V31 REGTEST PROTOTIP: fork @ block 100, halving every 1000 blocks
         consensus.nV31ForkHeight = 100;
         consensus.nV31HalvingInterval = 1000;
+        consensus.nMaxReorgDepth = 10;
         consensus.nV31InitialSubsidy = 25000000; // 0.25 GBX = 25M satoshi
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = opts.enforce_bip94;
