@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="branding/goldbrix-horizontal.png" alt="GoldBrix" width="440">
+  <img src="branding/goldbrix-logo.png" alt="GoldBrix" width="240">
 </p>
 
 <h1 align="center">GoldBrix (GBX)</h1>
