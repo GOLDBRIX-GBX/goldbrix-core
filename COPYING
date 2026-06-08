@@ -1,7 +1,12 @@
-The MIT License (MIT)
+GoldBrix Core
+Copyright (c) 2026 The GoldBrix developers
 
-Copyright (c) 2009-2025 The Bitcoin Core developers
-Copyright (c) 2009-2025 Bitcoin Developers
+GoldBrix Core is free and open-source software, released under the MIT License.
+The full license text follows.
+
+================================================================================
+MIT License
+
 Copyright (c) 2026 The GoldBrix developers
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,3 +26,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+================================================================================
+Upstream attribution
+
+Portions of GoldBrix Core derive from prior open-source work distributed under
+the MIT License. In accordance with that license, the original copyright notice
+is retained:
+
+    Copyright (c) 2009-2025 The Bitcoin Core developers
