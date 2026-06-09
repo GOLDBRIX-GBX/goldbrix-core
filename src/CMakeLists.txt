@@ -440,3 +440,21 @@ endif()
 if(BUILD_FUZZ_BINARY)
   add_subdirectory(test/fuzz)
 endif()
+
+# GoldBrix: rename shipped binaries (bitcoin* -> goldbrix*) via OUTPUT_NAME.
+# Internal CMake target names stay intact so the build graph does not break.
+foreach(_gbx_pair
+    "bitcoind:goldbrixd"
+    "bitcoin-cli:goldbrix-cli"
+    "bitcoin-tx:goldbrix-tx"
+    "bitcoin-util:goldbrix-util"
+    "bitcoin-wallet:goldbrix-wallet"
+    "bitcoin-qt:goldbrix-qt"
+    "bitcoin:goldbrix")
+  string(REPLACE ":" ";" _gbx_kv "${_gbx_pair}")
+  list(GET _gbx_kv 0 _gbx_tgt)
+  list(GET _gbx_kv 1 _gbx_out)
+  if(TARGET ${_gbx_tgt})
+    set_target_properties(${_gbx_tgt} PROPERTIES OUTPUT_NAME ${_gbx_out})
+  endif()
+endforeach()
