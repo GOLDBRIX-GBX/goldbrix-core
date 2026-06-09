@@ -31,6 +31,11 @@ Build instructions live in this directory:
 - Windows: [build-windows.md](build-windows.md)
 - Reproducible builds (GNU Guix): [guix.md](guix.md)
 
+Mining
+------
+
+See [mining.md](mining.md) to run a node and start mining GBX.
+
 License
 -------
 
