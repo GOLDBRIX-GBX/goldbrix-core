@@ -1,7 +1,7 @@
 # GoldBrix Core — reproducible build checksums (GNU Guix)
-# Tag: v30-gbx-1   Commit: aa0c6da   Platform: x86_64-linux-gnu
+# Tag: v30-gbx-2   Commit: 9c94b68   Platform: x86_64-linux-gnu
 # Check out this tag, rebuild with contrib/guix, and compare.
 # Identical hashes prove the binaries correspond exactly to this source.
-7ce9c2065b7c2e1a008b2c8f4b8fb87c083ffbb0c1087700acc18a40c0895bcf  bitcoin-aa0c6dafcdd2-x86_64-linux-gnu.tar.gz
-666ae7fec3424ce85299fc549e1075e43efe4b862e1358f7049a99d7e5d06e53  bitcoin-aa0c6dafcdd2-x86_64-linux-gnu-debug.tar.gz
-c2df411fa2520b86068389c781d37b93eba0bae7e772489f53da75db7f98be0f  bitcoin-aa0c6dafcdd2.tar.gz
+a20de31bc214ba0ccd1a8cdadc0c5ea388c2841fe805c9e22da583c6094adc06  goldbrix-9c94b68825c0-x86_64-linux-gnu.tar.gz
+ecd6109df04ea9711e9c14777599ccb36d572602244de464a5de7d45e4d2d6fa  goldbrix-9c94b68825c0-x86_64-linux-gnu-debug.tar.gz
+20c95a1f40763b0c04bda9fb928f4f65dc82ac0fd2ee1353a56d076e77dac946  goldbrix-9c94b68825c0.tar.gz
