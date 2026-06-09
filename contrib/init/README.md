@@ -1,12 +1,13 @@
-Sample configuration files for:
-```
-systemd: bitcoind.service
-Upstart: bitcoind.conf
-OpenRC:  bitcoind.openrc
-         bitcoind.openrcconf
-CentOS:  bitcoind.init
-macOS:   org.bitcoin.bitcoind.plist
-```
-have been made available to assist packagers in creating node packages here.
+Init scripts
+============
 
-See [doc/init.md](../../doc/init.md) for more information.
+Sample init and service files for running GoldBrix Core (`goldbrixd`):
+
+systemd: goldbrixd.service
+Upstart: goldbrixd.conf
+OpenRC:  goldbrixd.openrc
+         goldbrixd.openrcconf
+CentOS:  goldbrixd.init
+macOS:   org.goldbrix.goldbrixd.plist
+
+These are templates; adjust paths, users, and options for your system.

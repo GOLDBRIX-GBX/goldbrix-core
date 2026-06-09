@@ -20,24 +20,24 @@ const TranslateFn G_TRANSLATION_FUN{nullptr};
 static constexpr auto HELP_USAGE = R"(Usage: %s [OPTIONS] COMMAND...
 
 Options:
-  -m, --multiprocess     Run multiprocess binaries bitcoin-node, bitcoin-gui.
-  -M, --monolithic       Run monolithic binaries bitcoind, bitcoin-qt. (Default behavior)
+  -m, --multiprocess     Run multiprocess binaries goldbrix-node, goldbrix-gui.
+  -M, --monolithic       Run monolithic binaries goldbrixd, goldbrix-qt. (Default behavior)
   -v, --version          Show version information
   -h, --help             Show full help message
 
 Commands:
-  gui [ARGS]     Start GUI, equivalent to running 'bitcoin-qt [ARGS]' or 'bitcoin-gui [ARGS]'.
-  node [ARGS]    Start node, equivalent to running 'bitcoind [ARGS]' or 'bitcoin-node [ARGS]'.
-  rpc [ARGS]     Call RPC method, equivalent to running 'bitcoin-cli -named [ARGS]'.
-  wallet [ARGS]  Call wallet command, equivalent to running 'bitcoin-wallet [ARGS]'.
-  tx [ARGS]      Manipulate hex-encoded transactions, equivalent to running 'bitcoin-tx [ARGS]'.
+  gui [ARGS]     Start GUI, equivalent to running 'goldbrix-qt [ARGS]' or 'goldbrix-gui [ARGS]'.
+  node [ARGS]    Start node, equivalent to running 'goldbrixd [ARGS]' or 'goldbrix-node [ARGS]'.
+  rpc [ARGS]     Call RPC method, equivalent to running 'goldbrix-cli -named [ARGS]'.
+  wallet [ARGS]  Call wallet command, equivalent to running 'goldbrix-wallet [ARGS]'.
+  tx [ARGS]      Manipulate hex-encoded transactions, equivalent to running 'goldbrix-tx [ARGS]'.
   help           Show full help message.
 )";
 
 static constexpr auto HELP_FULL = R"(
 Additional less commonly used commands:
   bench [ARGS]      Run bench command, equivalent to running 'bench_bitcoin [ARGS]'.
-  chainstate [ARGS] Run bitcoin kernel chainstate util, equivalent to running 'bitcoin-chainstate [ARGS]'.
+  chainstate [ARGS] Run the kernel chainstate util, equivalent to running 'goldbrix-chainstate [ARGS]'.
   test [ARGS]       Run unit tests, equivalent to running 'test_bitcoin [ARGS]'.
   test-gui [ARGS]   Run GUI unit tests, equivalent to running 'test_bitcoin-qt [ARGS]'.
 )";
@@ -78,11 +78,11 @@ int main(int argc, char* argv[])
                 return EXIT_FAILURE;
             }
         } else if (cmd.command == "gui") {
-            args.emplace_back(cmd.use_multiprocess ? "bitcoin-gui" : "bitcoin-qt");
+            args.emplace_back(cmd.use_multiprocess ? "goldbrix-gui" : "goldbrix-qt");
         } else if (cmd.command == "node") {
-            args.emplace_back(cmd.use_multiprocess ? "bitcoin-node" : "bitcoind");
+            args.emplace_back(cmd.use_multiprocess ? "goldbrix-node" : "goldbrixd");
         } else if (cmd.command == "rpc") {
-            args.emplace_back("bitcoin-cli");
+            args.emplace_back("goldbrix-cli");
             // Since "bitcoin rpc" is a new interface that doesn't need to be
             // backward compatible, enable -named by default so it is convenient
             // for callers to use a mix of named and unnamed parameters. Callers
@@ -91,19 +91,19 @@ int main(int argc, char* argv[])
             // as unnamed parameters.
             args.emplace_back("-named");
         } else if (cmd.command == "wallet") {
-            args.emplace_back("bitcoin-wallet");
+            args.emplace_back("goldbrix-wallet");
         } else if (cmd.command == "tx") {
-            args.emplace_back("bitcoin-tx");
+            args.emplace_back("goldbrix-tx");
         } else if (cmd.command == "bench") {
             args.emplace_back("bench_bitcoin");
         } else if (cmd.command == "chainstate") {
-            args.emplace_back("bitcoin-chainstate");
+            args.emplace_back("goldbrix-chainstate");
         } else if (cmd.command == "test") {
             args.emplace_back("test_bitcoin");
         } else if (cmd.command == "test-gui") {
             args.emplace_back("test_bitcoin-qt");
         } else if (cmd.command == "util") {
-            args.emplace_back("bitcoin-util");
+            args.emplace_back("goldbrix-util");
         } else {
             throw std::runtime_error(strprintf("Unrecognized command: '%s'", cmd.command));
         }

@@ -450,6 +450,9 @@ foreach(_gbx_pair
     "bitcoin-util:goldbrix-util"
     "bitcoin-wallet:goldbrix-wallet"
     "bitcoin-qt:goldbrix-qt"
+    "bitcoin-node:goldbrix-node"
+    "bitcoin-gui:goldbrix-gui"
+    "bitcoin-chainstate:goldbrix-chainstate"
     "bitcoin:goldbrix")
   string(REPLACE ":" ";" _gbx_kv "${_gbx_pair}")
   list(GET _gbx_kv 0 _gbx_tgt)

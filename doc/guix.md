@@ -1,3 +1,3 @@
-# Bootstrappable Bitcoin Core Builds
+# Bootstrappable GoldBrix Builds
 
 See [contrib/guix/README.md](../contrib/guix/README.md)

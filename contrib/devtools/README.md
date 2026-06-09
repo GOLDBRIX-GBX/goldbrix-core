@@ -144,7 +144,7 @@ options, as all its configuration is set at the top of the file. It runs many ti
 pypy3 contrib/devtools/headerssync-params.py
 ```
 
-gen-bitcoin-conf.sh
+gen-goldbrix-conf.sh
 ===================
 
 Generates a bitcoin.conf file in `share/examples/` by parsing the output from `bitcoind --help`. This script is run during the
@@ -156,7 +156,7 @@ To use it with a different build directory, set `BUILDDIR`.
 For example:
 
 ```bash
-BUILDDIR=$PWD/my-build-dir contrib/devtools/gen-bitcoin-conf.sh
+BUILDDIR=$PWD/my-build-dir contrib/devtools/gen-goldbrix-conf.sh
 ```
 
 circular-dependencies.py

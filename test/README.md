@@ -23,7 +23,7 @@ The following examples assume that the build directory is named `build`.
 
 ## Fuzz tests
 
-See [/doc/fuzzing.md](/doc/fuzzing.md)
+Fuzz tests are available as build targets.
 
 ### Functional tests
 

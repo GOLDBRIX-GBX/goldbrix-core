@@ -1,0 +1,33 @@
+# /etc/conf.d/goldbrixd: config file for /etc/init.d/goldbrixd
+
+# Config file location
+#GOLDBRIXD_CONFIGFILE="/etc/goldbrix/goldbrix.conf"
+
+# What directory to write pidfile to?  (created and owned by $GOLDBRIXD_USER)
+#GOLDBRIXD_PIDDIR="/var/run/goldbrixd"
+
+# What filename to give the pidfile
+#GOLDBRIXD_PIDFILE="${GOLDBRIXD_PIDDIR}/goldbrixd.pid"
+
+# Where to write goldbrixd data (be mindful that the blockchain is large)
+#GOLDBRIXD_DATADIR="/var/lib/goldbrixd"
+
+# User and group to own goldbrixd process
+#GOLDBRIXD_USER="goldbrix"
+#GOLDBRIXD_GROUP="goldbrix"
+
+# Path to goldbrixd executable
+#GOLDBRIXD_BIN="/usr/bin/goldbrixd"
+
+# Nice value to run goldbrixd under
+#GOLDBRIXD_NICE=0
+
+# Additional options (avoid -conf and -datadir, use flags above)
+#GOLDBRIXD_OPTS=""
+
+# The timeout in seconds OpenRC will wait for goldbrixd to terminate
+# after a SIGTERM has been raised.
+# Note that this will be mapped as argument to start-stop-daemon's
+# '--retry' option, which means you can specify a retry schedule
+# here. For more information see man 8 start-stop-daemon.
+GOLDBRIXD_SIGTERM_TIMEOUT=600

@@ -67,8 +67,8 @@ following from the top of a clean repository:
 ## Codesigning build outputs
 
 The `guix-codesign` command attaches codesignatures (produced by codesigners) to
-existing non-codesigned outputs. Please see the [release process
-documentation](/doc/release-process.md#codesigning) for more context.
+existing non-codesigned outputs. Please see the release process
+documentation for more context.
 
 It respects many of the same environment variable flags as `guix-build`, with 2
 crucial differences:
