@@ -1,7 +1,7 @@
-# GoldBrix Core — reproducible build checksums (GNU Guix)
-# Tag: v30-gbx-2   Commit: 9c94b68   Platform: x86_64-linux-gnu
-# Check out this tag, rebuild with contrib/guix, and compare.
-# Identical hashes prove the binaries correspond exactly to this source.
-a20de31bc214ba0ccd1a8cdadc0c5ea388c2841fe805c9e22da583c6094adc06  goldbrix-9c94b68825c0-x86_64-linux-gnu.tar.gz
-ecd6109df04ea9711e9c14777599ccb36d572602244de464a5de7d45e4d2d6fa  goldbrix-9c94b68825c0-x86_64-linux-gnu-debug.tar.gz
-20c95a1f40763b0c04bda9fb928f4f65dc82ac0fd2ee1353a56d076e77dac946  goldbrix-9c94b68825c0.tar.gz
+# GoldBrix reproducible build manifest (Guix)
+# Tag: v30-gbx-3   Commit: b6a37af
+#
+# Verify: sha256sum -c SHA256SUMS
+73c41a7ae96441d9edd2d5ab115e68b05eeaaddea9e8f675ff8f1dd44cdb74d6  goldbrix-b6a37af010ff-x86_64-linux-gnu.tar.gz
+b7cb0cf8d7fb2c32c9e6fa11b4bae1c3a85fc4916d0c818ef1b2d2b37b2acc22  goldbrix-b6a37af010ff-x86_64-linux-gnu-debug.tar.gz
+bea220b6f97a36aafa5b205dd8278d7a058c1aad02900a79a2e59f0cc115c9e2  goldbrix-b6a37af010ff.tar.gz
