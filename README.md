@@ -89,6 +89,20 @@ move into keyless constructions and the founding keys are **destroyed, not
 transferred**, so no person — including the creator — can ever change the supply,
 redirect fees, or drain funds.
 
+## The Founder
+
+<p align="center">
+  <img src="branding/gideon-brick.png" alt="Gideon Brick" width="180">
+</p>
+
+GoldBrix was laid down, brick by brick, by an anonymous builder known only as
+**Gideon Brick** — who then stepped away. His absence is the design: a network
+with no one to capture, pressure, or buy off. He mined as a
+peer among peers, took no special share, and asked nothing in return. The name is
+a marker, not a master.
+
+> *"He laid the foundation, then walked away — and kept no key."*
+
 ## Build and verification
 
 GoldBrix Core builds with CMake. Reproducible builds are produced with GNU Guix
