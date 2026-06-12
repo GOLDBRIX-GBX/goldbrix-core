@@ -96,7 +96,7 @@ public:
     CAuxPow() = default;
 
     SERIALIZE_METHODS(CAuxPow, obj) {
-        READWRITE(obj.coinbaseTx,
+        READWRITE(TX_WITH_WITNESS(obj.coinbaseTx),
                   obj.vMerkleBranch, obj.nIndex,
                   obj.vChainMerkleBranch, obj.nChainIndex,
                   obj.parentBlock);
