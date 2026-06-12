@@ -59,7 +59,7 @@ bool CAuxPow::check(const uint256& hashAuxBlock, int32_t nChainId,
 
     // 3) The coinbase must connect to the parent block's merkle root.
     const uint256 nRootFromCoinbase =
-        CheckMerkleBranch(coinbaseTx->GetHash(), vMerkleBranch, nIndex);
+        CheckMerkleBranch(coinbaseTx->GetHash().ToUint256(), vMerkleBranch, nIndex);
     if (nRootFromCoinbase != parentBlock.hashMerkleRoot) {
         return false;
     }
