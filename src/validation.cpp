@@ -3947,7 +3947,7 @@ void ChainstateManager::ReceivedBlockTransactions(const CBlock& block, CBlockInd
 static bool CheckBlockHeader(const CBlockHeader& block, BlockValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    if (fCheckPOW && !CheckAuxPowProofOfWork(block, consensusParams))
         return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "high-hash", "proof of work failed");
 
     return true;
@@ -4143,7 +4143,7 @@ std::vector<unsigned char> ChainstateManager::GenerateCoinbaseCommitment(CBlock&
 bool HasValidProofOfWork(const std::vector<CBlockHeader>& headers, const Consensus::Params& consensusParams)
 {
     return std::all_of(headers.cbegin(), headers.cend(),
-            [&](const auto& header) { return CheckProofOfWork(header.GetHash(), header.nBits, consensusParams);});
+            [&](const auto& header) { return CheckAuxPowProofOfWork(header, consensusParams);});
 }
 
 bool IsBlockMutated(const CBlock& block, bool check_witness_root)
@@ -4208,6 +4208,18 @@ static bool ContextualCheckBlockHeader(const CBlockHeader& block, BlockValidatio
 
     // Check proof of work
     const Consensus::Params& consensusParams = chainman.GetConsensus();
+
+    // S4 merged mining gating: auxpow headers are only valid at/after the
+    // activation height and must carry the GoldBrix chain id.
+    if (block.IsAuxPow()) {
+        if (consensusParams.nAuxPowActivationHeight <= 0 || nHeight < consensusParams.nAuxPowActivationHeight)
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "auxpow-not-active", "merged-mining block before activation height");
+        if (GetChainId(block.nVersion) != consensusParams.nAuxPowChainId)
+            return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "auxpow-wrong-chainid", "merged-mining block with wrong chain id");
+    } else if (block.auxpow) {
+        return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "auxpow-unexpected", "auxpow attached without version flag");
+    }
+
     if (block.nBits != GetNextWorkRequired(pindexPrev, &block, consensusParams))
         return state.Invalid(BlockValidationResult::BLOCK_INVALID_HEADER, "bad-diffbits", "incorrect proof of work");
 

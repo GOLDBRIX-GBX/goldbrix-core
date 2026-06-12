@@ -7,6 +7,7 @@
 #include <auxpow.h>
 
 #include <hash.h>
+#include <pow.h>
 #include <primitives/block.h>
 #include <script/script.h>
 #include <streams.h>
@@ -129,4 +130,20 @@ bool CAuxPow::check(const uint256& hashAuxBlock, int32_t nChainId,
     }
 
     return true;
+}
+
+bool CheckAuxPowProofOfWork(const CBlockHeader& block, const Consensus::Params& params)
+{
+    if (!block.IsAuxPow()) {
+        // Legacy header must not carry an auxpow object.
+        if (block.auxpow) return false;
+        return CheckProofOfWork(block.GetHash(), block.nBits, params);
+    }
+    // AuxPow header: proof must be attached, must commit to this exact
+    // header, and the parent block's hash must satisfy the GBX target.
+    if (!block.auxpow) return false;
+    if (!block.auxpow->check(block.GetHash(), params.nAuxPowChainId, params)) {
+        return false;
+    }
+    return CheckProofOfWork(block.auxpow->getParentBlockPoWHash(), block.nBits, params);
 }

@@ -114,6 +114,11 @@ public:
     uint256 getParentBlockPoWHash() const { return parentBlock.GetHash(); }
 };
 
+/** Full proof-of-work check for a GBX header (legacy or merged-mined).
+ *  Legacy header: normal PoW on its own hash. AuxPow header: the attached
+ *  proof must commit to this header and the PARENT hash must meet nBits. */
+bool CheckAuxPowProofOfWork(const CBlockHeader& block, const Consensus::Params& params);
+
 /* ---- helpers on the (base) block version field ---- */
 
 inline int32_t GetBaseVersion(int32_t ver) { return ver % VERSION_CHAIN_START; }
