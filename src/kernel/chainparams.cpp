@@ -113,6 +113,9 @@ public:
         consensus.nV31ForkHeight = 20000;
         consensus.nV31HalvingInterval = 28000000;
         consensus.nMaxReorgDepth = 100;
+        // S4 AuxPow merged mining: chain id reserved; activation height set pre-deploy (0 = disabled)
+        consensus.nAuxPowActivationHeight = 0;
+        consensus.nAuxPowChainId = 0x4742;
         consensus.nV31InitialSubsidy = 25000000; // 0.25 GBX = 25M satoshi
         consensus.fPowAllowMinDifficultyBlocks = false;
         consensus.enforce_BIP94 = false;
@@ -560,6 +563,9 @@ public:
         consensus.nV31ForkHeight = 100;
         consensus.nV31HalvingInterval = 1000;
         consensus.nMaxReorgDepth = 10;
+        // S4 AuxPow on regtest: active early so tests can mine auxpow blocks
+        consensus.nAuxPowActivationHeight = 10;
+        consensus.nAuxPowChainId = 0x4742;
         consensus.nV31InitialSubsidy = 25000000; // 0.25 GBX = 25M satoshi
         consensus.fPowAllowMinDifficultyBlocks = true;
         consensus.enforce_BIP94 = opts.enforce_bip94;

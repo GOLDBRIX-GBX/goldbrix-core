@@ -127,6 +127,9 @@ struct Params {
     int nV31HalvingInterval{0};        // Post-fork halving interval
     int64_t nV31InitialSubsidy{0};     // Post-fork initial reward (satoshi)
     int nMaxReorgDepth{0};             // 0=disabled; max reorg depth (finality)
+    // S4 MERGED MINING (AuxPow): external SHA-256d parent chains can mine GBX
+    int nAuxPowActivationHeight{0};    // 0 = AuxPow disabled, else first height accepting auxpow blocks
+    int32_t nAuxPowChainId{0};         // merged-mining chain id (GoldBrix: 0x4742)
     std::chrono::seconds PowTargetSpacing() const
     {
         return std::chrono::seconds{nPowTargetSpacing};
