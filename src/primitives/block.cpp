@@ -10,7 +10,12 @@
 
 uint256 CBlockHeader::GetHash() const
 {
-    return (HashWriter{} << *this).GetHash();
+    // Hash covers ONLY the 80-byte base header; the attached auxpow (if any)
+    // is intentionally excluded so merged-mined blocks hash identically to
+    // their pure header. This keeps all existing block hashes unchanged.
+    HashWriter ss{};
+    ss << nVersion << hashPrevBlock << hashMerkleRoot << nTime << nBits << nNonce;
+    return ss.GetHash();
 }
 
 std::string CBlock::ToString() const

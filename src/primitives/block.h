@@ -6,6 +6,7 @@
 #ifndef BITCOIN_PRIMITIVES_BLOCK_H
 #define BITCOIN_PRIMITIVES_BLOCK_H
 
+#include <auxpow.h>
 #include <primitives/transaction.h>
 #include <serialize.h>
 #include <uint256.h>
@@ -29,12 +30,24 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
 
+    // GoldBrix merged mining: attached proof, present iff (nVersion & VERSION_AUXPOW).
+    std::shared_ptr<CAuxPow> auxpow;
+
     CBlockHeader()
     {
         SetNull();
     }
 
-    SERIALIZE_METHODS(CBlockHeader, obj) { READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot, obj.nTime, obj.nBits, obj.nNonce); }
+    SERIALIZE_METHODS(CBlockHeader, obj)
+    {
+        READWRITE(obj.nVersion, obj.hashPrevBlock, obj.hashMerkleRoot, obj.nTime, obj.nBits, obj.nNonce);
+        if (obj.nVersion & VERSION_AUXPOW) {
+            SER_READ(obj, obj.auxpow = std::make_shared<CAuxPow>());
+            READWRITE(*obj.auxpow);
+        } else {
+            SER_READ(obj, obj.auxpow.reset());
+        }
+    }
 
     void SetNull()
     {
@@ -44,11 +57,17 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+        auxpow.reset();
     }
 
     bool IsNull() const
     {
         return (nBits == 0);
+    }
+
+    bool IsAuxPow() const
+    {
+        return (nVersion & VERSION_AUXPOW) != 0;
     }
 
     uint256 GetHash() const;
@@ -110,6 +129,7 @@ public:
         block.nTime          = nTime;
         block.nBits          = nBits;
         block.nNonce         = nNonce;
+        block.auxpow         = auxpow;
         return block;
     }
 
