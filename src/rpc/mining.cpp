@@ -1176,6 +1176,7 @@ static RPCHelpMan createauxblock()
         std::unique_ptr<BlockTemplate> tmpl{miner.createNewBlock({.use_mempool = true, .coinbase_output_script = coinbase_output_script})};
         if (!tmpl) throw JSONRPCError(RPC_OUT_OF_MEMORY, "Failed to create block template");
         block = tmpl->getBlock();
+        block.hashMerkleRoot = BlockMerkleRoot(block);
         height = chainman.ActiveChain().Height() + 1;
     }
 
