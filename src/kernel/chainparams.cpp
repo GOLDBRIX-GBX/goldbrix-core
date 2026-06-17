@@ -114,7 +114,7 @@ public:
         consensus.nV31HalvingInterval = 28000000;
         consensus.nMaxReorgDepth = 100;
         // S4 AuxPow merged mining: chain id reserved; activation height set pre-deploy (0 = disabled)
-        consensus.nAuxPowActivationHeight = 0;
+        consensus.nAuxPowActivationHeight = 1500000;
         consensus.nAuxPowChainId = 0x4742;
         consensus.nV31InitialSubsidy = 25000000; // 0.25 GBX = 25M satoshi
         consensus.fPowAllowMinDifficultyBlocks = false;
