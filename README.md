@@ -44,7 +44,7 @@ to the people who mine it and hold it. Honesty is enforced by code, not by trust
 | Admin key | Yes (can mint, pause, drain) | **None** |
 | Launch | Premine / presale to insiders | **Fair PoW from genesis** |
 | Fees | Paid to the team | **100% burned** |
-| Rug pull | Team removes liquidity | **Liquidity burned, not lockable** |
+| Rug pull | Team removes liquidity | **Liquidity protocol-owned, locked by code — no withdraw function** |
 | Survival | Dies if team leaves | **Runs autonomously, self-heals** |
 
 ## Core properties
@@ -72,8 +72,10 @@ spam-resistant by construction:
 - **Burn-driven scarcity:** every trade permanently reduces supply, so activity
   compounds value for all holders instead of paying an operator.
 - **Automatic graduation:** once a token reaches its bonding-curve threshold it
-  graduates to an on-chain AMM, and its liquidity is **burned, not locked** —
-  removing the rug-pull vector entirely.
+  graduates to an AMM. Its liquidity is **protocol-owned and locked by code** —
+  no withdraw function exists, and every fee it earns is burned. At handover,
+  pool custody moves into keyless on-chain constructions (see The endgame),
+  making the lock permanent and verifiable by anyone.
 
 > Your fees aren't someone's salary. Your activity burns supply.
 
