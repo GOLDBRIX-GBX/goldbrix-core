@@ -22,10 +22,10 @@
 ## Get GoldBrix
 
 - **Web app:** [goldbrix.app](https://goldbrix.app) — create a wallet, buy/sell GBX (non-custodial)
-- **Android APK:** [downloads](https://goldbrix.app/downloads/) — verify SHA-256 against [version.json](https://goldbrix.app/version.json)
+- **Android APK:** [downloads](https://goldbrix.app/downloads/) or [GitHub Releases](https://github.com/GOLDBRIX-GBX/goldbrix-core/releases/latest) — verify SHA-256 against [version.json](https://goldbrix.app/version.json)
 - **Explorer:** [explorer.goldbrix.app](https://explorer.goldbrix.app)
 - **Mine (0 fee, non-custodial):** `stratum+tcp://goldbrix.app:3333` — [guide](https://github.com/GOLDBRIX-GBX/goldbrix-tools/blob/main/docs/MINING.md) · live stats: [/pool-info](https://goldbrix.app/pool-info)
-- **Run a node:** [guide](https://goldbrix.app/run-node) · release checksums: [SHA256SUMS](https://goldbrix.app/downloads/SHA256SUMS-v30-gbx-7.txt)
+- **Run a node:** [guide](https://goldbrix.app/run-node) · release checksums: [SHA256SUMS](https://goldbrix.app/downloads/SHA256SUMS-v30-gbx-7.txt) · binaries also on [GitHub Releases](https://github.com/GOLDBRIX-GBX/goldbrix-core/releases/latest)
 
 ## Why GoldBrix
 
