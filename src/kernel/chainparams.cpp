@@ -206,7 +206,7 @@ base58Prefixes[SECRET_KEY] = std::vector<unsigned char>(1, 68); // B (WIF)
 
         bech32_hrp = "bn";
 
-        vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_main), std::end(chainparams_seed_main));
+        // GOLDBRIX: inherited fixed seeds removed (line disabled)
 
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
