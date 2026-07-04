@@ -141,6 +141,11 @@ bool PermittedDifficultyTransition(const Consensus::Params& params, int64_t heig
 {
     if (params.fPowAllowMinDifficultyBlocks) return true;
 
+    // LWMA (post-fork) retargets every block; per-block nBits changes are expected.
+    // This is only an anti-DoS presync sanity check - full validation happens in
+    // GetNextWorkRequired at block acceptance.
+    if (params.nLwmaActivationHeight > 0 && height >= params.nLwmaActivationHeight) return true;
+
     if (height % params.DifficultyAdjustmentInterval() == 0) {
         int64_t smallest_timespan = params.nPowTargetTimespan/4;
         int64_t largest_timespan = params.nPowTargetTimespan*4;
