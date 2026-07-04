@@ -110,6 +110,7 @@ public:
         consensus.nLwmaActivationHeight = 20000;
         consensus.nLwmaWindowSize = 45;
         consensus.nLwmaTargetSpacing = 3;  // V31: 3s blocks (was 120s)
+        consensus.nLwmaFixHeight = 2200000; // LWMA weighting fix hard fork
         consensus.nV31ForkHeight = 20000;
         consensus.nV31HalvingInterval = 28000000;
         consensus.nMaxReorgDepth = 100;
@@ -563,6 +564,7 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         // V31 REGTEST PROTOTIP: fork @ block 100, halving every 1000 blocks
         consensus.nV31ForkHeight = 100;
+        consensus.nLwmaFixHeight = 200;
         consensus.nV31HalvingInterval = 1000;
         consensus.nMaxReorgDepth = 10;
         // S4 AuxPow on regtest: active early so tests can mine auxpow blocks

@@ -46,8 +46,17 @@ unsigned int LwmaCalculateNextWorkRequired(const CBlockIndex* pindexLast, const 
         sumTarget += target / (k);
     }
 
-    // Cap negative t (timestamp games)
-    if (t < N * k / 20) t = N * k / 20;
+    const bool lwmaFixed = params.nLwmaFixHeight > 0 && (pindexLast->nHeight + 1) >= params.nLwmaFixHeight;
+    if (lwmaFixed) {
+        // Corrected LWMA (zawy): avg_target * t / k  ==  sumTarget/N * t.
+        // t floor k/10: difficulty can rise at most 10x per block.
+        sumTarget /= N;
+        if (t < k / 10) t = k / 10;
+    } else {
+        // Legacy (pre-fix) behaviour preserved for historical validation:
+        // missing /N kept target 45x too easy -> clamped at powLimit.
+        if (t < N * k / 20) t = N * k / 20;
+    }
 
     arith_uint256 nextTarget = sumTarget * t;
     if (nextTarget > powLimit) {
