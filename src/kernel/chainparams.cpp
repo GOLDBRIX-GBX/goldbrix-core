@@ -332,7 +332,7 @@ assert(consensus.hashGenesisBlock == genesis.GetHash());
 
         bech32_hrp = "tb";
 
-        vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_test), std::end(chainparams_seed_test));
+        vFixedSeeds.clear();
 
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
@@ -435,7 +435,7 @@ base58Prefixes[SECRET_KEY]     = std::vector<unsigned char>(1, 68);  // WIF star
 
         bech32_hrp = "bn";
 
-        vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_testnet4), std::end(chainparams_seed_testnet4));
+        vFixedSeeds.clear();
 
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
