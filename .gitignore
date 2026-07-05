@@ -34,3 +34,4 @@ __pycache__/
 .vscode/
 build_rel/
 guix-build-*/
+src/*.new
