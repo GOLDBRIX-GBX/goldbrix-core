@@ -25,6 +25,7 @@ add_library(bitcoinkernel
   ../compressor.cpp
   ../consensus/merkle.cpp
   ../consensus/tx_check.cpp
+  ../consensus/gbx_launchpad.cpp
   ../consensus/tx_verify.cpp
   ../core_read.cpp
   ../dbwrapper.cpp
