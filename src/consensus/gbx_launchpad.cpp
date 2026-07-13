@@ -19,8 +19,10 @@ static constexpr size_t CURVE_PAYLOAD_LEN = CURVE_TAG_LEN + 1 + 32 + 8 + 8 + 33;
 
 static bool IsKnownOp(unsigned char c)
 {
-    return c == (unsigned char)CurveOp::BUY || c == (unsigned char)CurveOp::SELL ||
-           c == (unsigned char)CurveOp::REFUND || c == (unsigned char)CurveOp::GRADUATE;
+    return c == (unsigned char)CurveOp::CREATE    || c == (unsigned char)CurveOp::BUY  ||
+           c == (unsigned char)CurveOp::SELL      || c == (unsigned char)CurveOp::REFUND ||
+           c == (unsigned char)CurveOp::GRADUATE  || c == (unsigned char)CurveOp::POOL_BUY ||
+           c == (unsigned char)CurveOp::POOL_SELL;
 }
 
 std::optional<CurveIntent> ParseCurveIntent(const CTransaction& tx)
@@ -77,6 +79,46 @@ uint256 CurveIdFromOutpoint(const COutPoint& out)
     uint256 id;
     CSHA256().Write(buf, sizeof(buf)).Finalize(id.begin());
     return id;
+}
+
+CScript PoolWitnessScript(const uint256& coin_id, int64_t tokens)
+{
+    std::vector<unsigned char> t(8);
+    for (int i = 0; i < 8; ++i) t[i] = (unsigned char)((tokens >> ((7 - i) * 8)) & 0xff);
+    CScript s;
+    s << std::vector<unsigned char>(coin_id.begin(), coin_id.end());
+    s << t;
+    s << OP_2DROP << OP_TRUE;
+    return s;
+}
+
+CScript PoolScriptPubKey(const uint256& coin_id, int64_t tokens)
+{
+    const CScript ws = PoolWitnessScript(coin_id, tokens);
+    uint256 h;
+    CSHA256().Write(ws.data(), ws.size()).Finalize(h.begin());
+    CScript spk;
+    spk << OP_0 << std::vector<unsigned char>(h.begin(), h.end());
+    return spk;
+}
+
+std::optional<int64_t> ParsePoolWitnessScript(const std::vector<unsigned char>& ws_bytes, const uint256& coin_id)
+{
+    const CScript ws(ws_bytes.begin(), ws_bytes.end());
+    CScript::const_iterator pc = ws.begin();
+    opcodetype op;
+    std::vector<unsigned char> id, t;
+    if (!ws.GetOp(pc, op, id) || id.size() != 32) return std::nullopt;
+    if (!ws.GetOp(pc, op, t)  || t.size()  != 8)  return std::nullopt;
+    if (!ws.GetOp(pc, op) || op != OP_2DROP)      return std::nullopt;
+    if (!ws.GetOp(pc, op) || op != OP_TRUE)       return std::nullopt;
+    if (pc != ws.end())                           return std::nullopt;
+    uint256 got; std::memcpy(got.begin(), id.data(), 32);
+    if (got != coin_id) return std::nullopt;
+    int64_t tokens = 0;
+    for (int i = 0; i < 8; ++i) tokens = (tokens << 8) | (int64_t)t[i];
+    if (tokens < 0) return std::nullopt;
+    return tokens;
 }
 
 //! The canonical burn output: P2WPKH with an all-zero witness program.
@@ -228,14 +270,80 @@ CurveError CheckCurveTransition(const CTransaction& tx,
         return CurveError::OK;
     }
 
-    case CurveOp::GRADUATE:
-        // Reserved for the AMM transition (separate rule, separate UTXO shape).
-        return CurveError::BAD_OUTPUT;
+    case CurveOp::GRADUATE: {
+        // Anyone may trigger it — it is not a privilege, it is a fact about the reserve.
+        if (reserve_in < CURVE_GRADUATION_SAT) return CurveError::NOT_GRADUATED;
+        // The curve must not survive: no curve output may be recreated.
+        if (reserve_out != 0) return CurveError::BAD_OUTPUT;
+        // The whole reserve moves into the pool, together with the tokens that were never
+        // sold on the curve. Nothing is skimmed on the way: liquidity in = liquidity out.
+        const int64_t sold = CurveTokensSold(reserve_in);
+        const int64_t pool_tokens = CURVE_LP_TOKENS + (CURVE_TOKENS - sold);
+        const CScript pool_spk = PoolScriptPubKey(intent.coin_id, pool_tokens);
+        int64_t pool_value = -1;
+        for (const CTxOut& out : tx.vout) {
+            if (out.scriptPubKey != pool_spk) continue;
+            if (pool_value >= 0) return CurveError::BAD_OUTPUT;   // two pools = malformed
+            pool_value = out.nValue;
+        }
+        if (pool_value != reserve_in) return CurveError::BAD_AMOUNT;  // every unit follows
+        // Graduation burns nothing and mints nothing: it only changes the shape of the box.
+        if (TokensInInputs(tx, intent.coin_id) != 0) return CurveError::BAD_TOKENS;
+        return CurveError::OK;
+    }
     }
 
     return CurveError::NO_INTENT;
 }
 
+
+CurveError CheckPoolTransition(const CTransaction& tx,
+                              const CurveIntent& intent,
+                              int64_t pool_gbx_in,
+                              int64_t pool_tok_in)
+{
+    if (pool_gbx_in <= 0 || pool_tok_in <= 0) return CurveError::BAD_AMOUNT;
+
+    const int64_t burned = BurnedAmount(tx);
+    int64_t new_gbx = 0, new_tok = 0;
+
+    if (intent.op == CurveOp::POOL_BUY) {
+        // intent.amount = gross GBX the buyer commits.
+        const int64_t fee = PoolFee(intent.amount);
+        const int64_t net = intent.amount - fee;
+        int64_t tokens_out = 0;
+        if (!PoolBuy(pool_gbx_in, pool_tok_in, net, tokens_out, new_gbx, new_tok)) return CurveError::BAD_AMOUNT;
+        if (burned < fee) return CurveError::BAD_FEE;
+        if (intent.tokens_out != tokens_out) return CurveError::BAD_TOKENS;
+        if (!HasTokenOutput(tx, intent.coin_id, tokens_out, intent.pubkey)) return CurveError::BAD_TOKENS;
+        if (TokensInInputs(tx, intent.coin_id) != 0) return CurveError::BAD_TOKENS;
+    } else if (intent.op == CurveOp::POOL_SELL) {
+        // intent.amount = tokens sold into the pool.
+        int64_t gross = 0;
+        if (!PoolSell(pool_gbx_in, pool_tok_in, intent.amount, gross, new_gbx, new_tok)) return CurveError::BAD_AMOUNT;
+        const int64_t fee = PoolFee(gross);
+        if (burned < fee) return CurveError::BAD_FEE;
+        const int64_t held = TokensInInputs(tx, intent.coin_id);
+        if (held < 0 || held < intent.amount) return CurveError::BAD_TOKENS;
+        const int64_t change = held - intent.amount;
+        if (intent.tokens_out != change) return CurveError::BAD_TOKENS;
+        if (change > 0 && !HasTokenOutput(tx, intent.coin_id, change, intent.pubkey)) return CurveError::BAD_TOKENS;
+    } else {
+        return CurveError::NO_INTENT;
+    }
+
+    // The pool must be recreated with EXACTLY the reserves the product dictates.
+    // No skimming, no draining, no owner. The liquidity outlives everyone.
+    const CScript spk = PoolScriptPubKey(intent.coin_id, new_tok);
+    int64_t found = -1;
+    for (const CTxOut& out : tx.vout) {
+        if (out.scriptPubKey != spk) continue;
+        if (found >= 0) return CurveError::BAD_OUTPUT;
+        found = out.nValue;
+    }
+    if (found != new_gbx) return CurveError::BAD_AMOUNT;
+    return CurveError::OK;
+}
 
 bool CheckCurveInputs(const CTransaction& tx,
                       TxValidationState& state,
@@ -263,6 +371,23 @@ bool CheckCurveInputs(const CTransaction& tx,
         ++curve_inputs;
         reserve_in = coin.out.nValue;
         curve_height = coin.nHeight;
+    }
+
+    // Is a pool being spent? Its script is revealed in the witness, carrying the token side.
+    if (intent.has_value() && (intent->op == CurveOp::POOL_BUY || intent->op == CurveOp::POOL_SELL)) {
+        for (size_t i = 0; i < tx.vin.size(); ++i) {
+            const CScriptWitness& wit = tx.vin[i].scriptWitness;
+            if (wit.stack.empty()) continue;
+            const std::optional<int64_t> pool_tok = ParsePoolWitnessScript(wit.stack.back(), intent->coin_id);
+            if (!pool_tok.has_value()) continue;
+            const Coin& coin = inputs.AccessCoin(tx.vin[i].prevout);
+            if (coin.IsSpent()) continue;
+            if (coin.out.scriptPubKey != PoolScriptPubKey(intent->coin_id, *pool_tok)) continue;
+            const CurveError perr = CheckPoolTransition(tx, *intent, coin.out.nValue, *pool_tok);
+            if (perr == CurveError::OK) return true;
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-pool-invalid");
+        }
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-pool-not-spent");
     }
 
     if (curve_inputs == 0) {
@@ -298,6 +423,7 @@ bool CheckCurveInputs(const CTransaction& tx,
     case CurveError::MULTIPLE_CURVES:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
     case CurveError::BAD_TOKENS:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-tokens");
     case CurveError::BAD_COIN_ID:      return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-coin-id");
+    case CurveError::NOT_GRADUATED:    return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-not-graduated");
     case CurveError::NO_INTENT:        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-no-intent");
     }
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-unknown");

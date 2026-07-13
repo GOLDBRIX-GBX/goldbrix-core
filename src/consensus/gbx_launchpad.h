@@ -22,7 +22,8 @@
 namespace gbx {
 
 //! Curve operations declared in the OP_RETURN of a spending transaction.
-enum class CurveOp : uint8_t { CREATE = 'C', BUY = 'B', SELL = 'S', REFUND = 'R', GRADUATE = 'G' };
+enum class CurveOp : uint8_t { CREATE = 'C', BUY = 'B', SELL = 'S', REFUND = 'R', GRADUATE = 'G',
+                              POOL_BUY = 'P', POOL_SELL = 'Q' };
 
 //! A coin is born with a real position in it. Not a fee — the creator's own money, on the
 //! same curve as everyone else's, at the same price. Spam costs; launching costs nothing extra.
@@ -33,6 +34,21 @@ static constexpr int64_t CURVE_MIN_DEV_BUY_SAT = 1 * 100000000LL;   //!< 1 GBX m
 //! curves can ever share an id, and nobody can squat on someone else's coin.
 //!     coin_id = SHA256( txid || vout )  of the first input of the CREATE transaction
 uint256 CurveIdFromOutpoint(const COutPoint& out);
+
+//! ── GRADUATION ────────────────────────────────────────────────────────────────
+//! When a curve fills, it dies and a pool is born. The reserve and the remaining
+//! tokens become permanent liquidity: the pool has no owner and no LP tokens to
+//! redeem, so the money can never be pulled out. There is nothing left to rug.
+//!
+//! The pool lives in its own UTXO, holding the GBX side. The token side is carried
+//! in the script, exactly like a holding — so the node reads both reserves locally.
+//!     poolScript = <coin_id:32> <tokens:8> OP_2DROP OP_TRUE      (anyone-can-spend,
+//!     but consensus dictates the shape of the result: x*y=k, fee burned)
+CScript PoolWitnessScript(const uint256& coin_id, int64_t tokens);
+CScript PoolScriptPubKey(const uint256& coin_id, int64_t tokens);
+
+//! Read the token side of a pool back out of the witness script revealed when spent.
+std::optional<int64_t> ParsePoolWitnessScript(const std::vector<unsigned char>& ws, const uint256& coin_id);
 
 //! Refund becomes available after this many blocks without any curve activity.
 //! 3s blocks => 30 days = 864,000 blocks. A dead coin returns the money it holds.
@@ -89,6 +105,7 @@ enum class CurveError {
     NO_INTENT,          //!< spends a curve UTXO but declares nothing
     BAD_TOKENS,         //!< tokens conjured, destroyed, or not proven to be held
     BAD_COIN_ID,        //!< the coin id is not the fingerprint of the funding outpoint
+    NOT_GRADUATED,      //!< graduation attempted before the reserve was full
     BAD_OUTPUT,         //!< the new curve UTXO is missing or malformed
     BAD_AMOUNT,         //!< the value moved does not match the formula
     BAD_FEE,            //!< the protocol fee was not burned
@@ -112,6 +129,15 @@ CurveError CheckCurveTransition(const CTransaction& tx,
                                 int64_t reserve_in,
                                 int curve_height,
                                 int spend_height);
+
+//! Validate a trade against a graduated pool. Same philosophy: the pool has no owner,
+//! so the only thing that can move its money is the constant product itself.
+//! @param[in] pool_gbx_in   GBX held by the spent pool output
+//! @param[in] pool_tok_in   token side, read from the revealed pool script
+CurveError CheckPoolTransition(const CTransaction& tx,
+                               const CurveIntent& intent,
+                               int64_t pool_gbx_in,
+                               int64_t pool_tok_in);
 
 //! Burn address script (unspendable): OP_RETURN-less, provably unspendable OP_0 to the
 //! canonical burn program. Fees must go here — the protocol collects nothing.

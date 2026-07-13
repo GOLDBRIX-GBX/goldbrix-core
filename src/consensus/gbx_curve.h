@@ -23,6 +23,8 @@ static constexpr int64_t CURVE_V_GBX_SAT = 30000LL * COIN;      //!< 30,000 GBX 
 static constexpr int64_t CURVE_V_TOKENS  = 1073000000LL;        //!< virtual token reserve
 static constexpr int64_t CURVE_TOKENS    = 800000000LL;         //!< real tokens sellable on the curve
 static constexpr int64_t CURVE_LP_TOKENS = 200000000LL;         //!< tokens reserved for the AMM pool
+static constexpr int64_t CURVE_GRADUATION_SAT = 80000LL * COIN;  //!< a coin graduates when its reserve reaches this
+static constexpr int64_t POOL_FEE_BPS = 30;                      //!< 0.30% on AMM trades — BURNED, never collected
 static constexpr int64_t CURVE_FEE_BPS   = 50;                  //!< 0.50% on buy/sell — BURNED, never collected
 
 //! k = V_GBX_SAT * V_TOKENS = 3.219e21 — exceeds int64, must be 128-bit.
@@ -72,6 +74,55 @@ inline bool CurveSell(int64_t reserve_sat, int64_t tokens_in, int64_t& gbx_out_s
     if (gbx_out_sat > reserve_sat) gbx_out_sat = reserve_sat; // hard guard: never drain beyond what exists
     new_reserve_sat = reserve_sat - gbx_out_sat;
     return true;
+}
+
+//! ── AMM (post-graduation) ─────────────────────────────────────────────────────
+//! Constant product on REAL reserves. No virtual anything, no owner, no LP tokens:
+//! the liquidity was locked the moment the coin graduated and can never be withdrawn.
+
+//! Tokens out for gbx in (fee already deducted). x*y=k, floor division.
+inline bool PoolBuy(int64_t pool_gbx, int64_t pool_tok, int64_t gbx_in, int64_t& tokens_out,
+                    int64_t& new_gbx, int64_t& new_tok)
+{
+    if (pool_gbx <= 0 || pool_tok <= 0 || gbx_in <= 0) return false;
+    if (gbx_in > MAX_MONEY || pool_gbx > MAX_MONEY) return false;
+    const u128 k = (u128)pool_gbx * (u128)pool_tok;
+    const u128 ng = (u128)pool_gbx + (u128)gbx_in;
+    // CEILING on the token side too: the pool keeps the dust in TOKENS, so the buyer gets
+    // slightly fewer. With floor, k grew on every buy and a round-trip printed free money.
+    // Rounding must always favour the pool — on both legs, or the invariant leaks.
+    const int64_t nt = (int64_t)((k + ng - 1) / ng);
+    tokens_out = pool_tok - nt;
+    if (tokens_out <= 0) return false;
+    new_gbx = pool_gbx + gbx_in;
+    new_tok = nt;
+    return true;
+}
+
+//! GBX out (gross, before fee) for tokens in.
+inline bool PoolSell(int64_t pool_gbx, int64_t pool_tok, int64_t tok_in, int64_t& gbx_out,
+                     int64_t& new_gbx, int64_t& new_tok)
+{
+    if (pool_gbx <= 0 || pool_tok <= 0 || tok_in <= 0) return false;
+    const u128 k = (u128)pool_gbx * (u128)pool_tok;
+    const u128 nt = (u128)pool_tok + (u128)tok_in;
+    // CEILING, not floor: the rounding must always favour the pool, never the trader.
+    // With floor, a buy followed by a sell would return MORE than was paid in — money from
+    // nothing, and the pool bleeds out one unit at a time. Rounding up keeps k monotone.
+    const int64_t ng = (int64_t)((k + nt - 1) / nt);
+    gbx_out = pool_gbx - ng;
+    if (gbx_out <= 0) return false;
+    if (gbx_out > pool_gbx) return false;             // cannot drain more than exists
+    new_gbx = ng;
+    new_tok = (int64_t)nt;
+    return true;
+}
+
+//! Pool fee (burned). Integer, floor.
+inline int64_t PoolFee(int64_t gross_sat)
+{
+    if (gross_sat <= 0) return 0;
+    return (int64_t)(((u128)gross_sat * (u128)POOL_FEE_BPS) / 10000);
 }
 
 //! Protocol fee (burned). Integer, floor.
