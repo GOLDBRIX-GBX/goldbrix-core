@@ -11,6 +11,7 @@
 #define GBX_CONSENSUS_LAUNCHPAD_H
 
 #include <consensus/gbx_curve.h>
+#include <consensus/gbx_token.h>
 #include <crypto/sha256.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
@@ -63,17 +64,20 @@ inline bool IsCurveOutput(const CTxOut& out, const uint256& coin_id)
 struct CurveIntent {
     CurveOp op;
     uint256 coin_id;
-    int64_t amount{0};   //!< BUY: gbx_in (sat, gross) · SELL/REFUND: tokens burned · GRADUATE: unused
+    int64_t amount{0};        //!< BUY: gbx_in (gross) · SELL/REFUND: tokens burned back
+    int64_t tokens_out{0};    //!< tokens minted to the payload pubkey (BUY) or returned as change (SELL/REFUND)
+    std::vector<unsigned char> pubkey;  //!< 33 bytes: who receives the tokens
 };
 
 //! Extract the single curve intent from a transaction, if any.
-//! Format: OP_RETURN "GBX:C:" <op:1> <coin_id:32> <amount:8, big-endian>
+//! Format: OP_RETURN "GBX:C:" <op:1> <coin_id:32> <amount:8> <tokens_out:8> <pubkey:33> (big-endian)
 std::optional<CurveIntent> ParseCurveIntent(const CTransaction& tx);
 
 //! Result of validating a curve transition.
 enum class CurveError {
     OK = 0,
     NO_INTENT,          //!< spends a curve UTXO but declares nothing
+    BAD_TOKENS,         //!< tokens conjured, destroyed, or not proven to be held
     BAD_OUTPUT,         //!< the new curve UTXO is missing or malformed
     BAD_AMOUNT,         //!< the value moved does not match the formula
     BAD_FEE,            //!< the protocol fee was not burned

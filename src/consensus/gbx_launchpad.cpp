@@ -15,7 +15,7 @@ namespace gbx {
 //!   "GBX:C:" (6 bytes) | op (1) | coin_id (32) | amount (8, big-endian) = 47 bytes
 static const char* CURVE_TAG = "GBX:C:";
 static constexpr size_t CURVE_TAG_LEN = 6;
-static constexpr size_t CURVE_PAYLOAD_LEN = CURVE_TAG_LEN + 1 + 32 + 8; // 47
+static constexpr size_t CURVE_PAYLOAD_LEN = CURVE_TAG_LEN + 1 + 32 + 8 + 8 + 33; // 88
 
 static bool IsKnownOp(unsigned char c)
 {
@@ -49,11 +49,15 @@ std::optional<CurveIntent> ParseCurveIntent(const CTransaction& tx)
         intent.op = static_cast<CurveOp>(op_byte);
         std::memcpy(intent.coin_id.begin(), data.data() + CURVE_TAG_LEN + 1, 32);
 
-        int64_t amount = 0;
-        const unsigned char* a = data.data() + CURVE_TAG_LEN + 1 + 32;
-        for (int i = 0; i < 8; ++i) amount = (amount << 8) | (int64_t)a[i]; // big-endian
-        if (amount < 0) return std::nullopt;                                 // no negatives, ever
+        const unsigned char* p = data.data() + CURVE_TAG_LEN + 1 + 32;
+        int64_t amount = 0, tokens_out = 0;
+        for (int i = 0; i < 8; ++i) amount     = (amount     << 8) | (int64_t)p[i];       // big-endian
+        for (int i = 0; i < 8; ++i) tokens_out = (tokens_out << 8) | (int64_t)p[8 + i];
+        if (amount < 0 || tokens_out < 0) return std::nullopt;               // no negatives, ever
         intent.amount = amount;
+        intent.tokens_out = tokens_out;
+        intent.pubkey.assign(p + 16, p + 16 + 33);
+        if (intent.pubkey[0] != 0x02 && intent.pubkey[0] != 0x03) return std::nullopt; // compressed only
 
         found = intent;
     }
@@ -96,6 +100,20 @@ static int64_t CurveOutputValue(const CTransaction& tx, const uint256& coin_id)
     return value;   // 0 with found==0 means: no curve output -> the curve is closed
 }
 
+//! Is the declared token holding actually present in the outputs?
+//! We rebuild the exact scriptPubKey from (coin_id, amount, pubkey) and look for it:
+//! a lookalike script cannot pass, because the hash would differ.
+static bool HasTokenOutput(const CTransaction& tx, const uint256& coin_id, int64_t amount,
+                           const std::vector<unsigned char>& pubkey)
+{
+    if (amount <= 0 || pubkey.size() != 33) return false;
+    const CScript spk = TokenScriptPubKey(coin_id, amount, pubkey);
+    for (const CTxOut& out : tx.vout) {
+        if (out.scriptPubKey == spk) return true;
+    }
+    return false;
+}
+
 CurveError CheckCurveTransition(const CTransaction& tx,
                                 const CurveIntent& intent,
                                 int64_t reserve_in,
@@ -118,6 +136,11 @@ CurveError CheckCurveTransition(const CTransaction& tx,
         if (expected_reserve <= 0) return CurveError::BAD_AMOUNT;      // a buy always leaves money behind
         if (reserve_out != expected_reserve) return CurveError::BAD_AMOUNT;
         if (burned < fee) return CurveError::BAD_FEE;   // the fee is burned, never collected
+        // Tokens cannot be conjured: the buyer receives EXACTLY what the curve says, no more.
+        if (intent.tokens_out != tokens_out) return CurveError::BAD_TOKENS;
+        if (!HasTokenOutput(tx, intent.coin_id, tokens_out, intent.pubkey)) return CurveError::BAD_TOKENS;
+        // A buy destroys no tokens.
+        if (TokensInInputs(tx, intent.coin_id) != 0) return CurveError::BAD_TOKENS;
         return CurveError::OK;
     }
 
@@ -128,6 +151,15 @@ CurveError CheckCurveTransition(const CTransaction& tx,
         if (reserve_out != expected_reserve) return CurveError::BAD_AMOUNT;
         const int64_t fee = CurveFee(gross);
         if (burned < fee) return CurveError::BAD_FEE;
+        // You can only sell what you can prove you hold: the spent token scripts carry the amount,
+        // and spending them required your signature. Nothing else counts.
+        const int64_t held = TokensInInputs(tx, intent.coin_id);
+        if (held < 0) return CurveError::BAD_TOKENS;
+        if (held < intent.amount) return CurveError::BAD_TOKENS;
+        // Whatever is left over must come back as a new holding, or it is destroyed.
+        const int64_t change = held - intent.amount;
+        if (intent.tokens_out != change) return CurveError::BAD_TOKENS;
+        if (change > 0 && !HasTokenOutput(tx, intent.coin_id, change, intent.pubkey)) return CurveError::BAD_TOKENS;
         return CurveError::OK;
     }
 
@@ -138,6 +170,11 @@ CurveError CheckCurveTransition(const CTransaction& tx,
         if (spend_height - curve_height < CURVE_REFUND_IDLE_BLOCKS) return CurveError::NOT_IDLE;
         const int64_t sold = CurveTokensSold(reserve_in);
         if (sold <= 0 || intent.amount <= 0 || intent.amount > sold) return CurveError::BAD_AMOUNT;
+        const int64_t held_r = TokensInInputs(tx, intent.coin_id);
+        if (held_r < 0 || held_r < intent.amount) return CurveError::BAD_TOKENS;   // prove it is yours
+        const int64_t change_r = held_r - intent.amount;
+        if (intent.tokens_out != change_r) return CurveError::BAD_TOKENS;
+        if (change_r > 0 && !HasTokenOutput(tx, intent.coin_id, change_r, intent.pubkey)) return CurveError::BAD_TOKENS;
         // out = reserve_in * tokens / sold   (128-bit, floor: dust stays in the reserve)
         const int64_t out = (int64_t)(((u128)reserve_in * (u128)intent.amount) / (u128)sold);
         const int64_t expected_reserve = reserve_in - out;
@@ -205,6 +242,7 @@ bool CheckCurveInputs(const CTransaction& tx,
     case CurveError::NOT_IDLE:         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-not-idle");
     case CurveError::CURVE_EXHAUSTED:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-exhausted");
     case CurveError::MULTIPLE_CURVES:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
+    case CurveError::BAD_TOKENS:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-tokens");
     case CurveError::NO_INTENT:        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-no-intent");
     }
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-unknown");
