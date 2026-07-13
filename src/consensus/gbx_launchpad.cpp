@@ -65,6 +65,20 @@ std::optional<CurveIntent> ParseCurveIntent(const CTransaction& tx)
 }
 
 
+uint256 CurveIdFromOutpoint(const COutPoint& out)
+{
+    unsigned char buf[36];
+    std::memcpy(buf, out.hash.begin(), 32);
+    const uint32_t n = out.n;
+    buf[32] = (unsigned char)((n >> 24) & 0xff);
+    buf[33] = (unsigned char)((n >> 16) & 0xff);
+    buf[34] = (unsigned char)((n >> 8) & 0xff);
+    buf[35] = (unsigned char)(n & 0xff);
+    uint256 id;
+    CSHA256().Write(buf, sizeof(buf)).Finalize(id.begin());
+    return id;
+}
+
 //! The canonical burn output: P2WPKH with an all-zero witness program.
 //! No private key can ever produce this hash160. Fees leave the money supply forever.
 CScript CurveBurnScript()
@@ -126,6 +140,29 @@ CurveError CheckCurveTransition(const CTransaction& tx,
     const int64_t burned = BurnedAmount(tx);
 
     switch (intent.op) {
+
+    case CurveOp::CREATE: {
+        // A new curve is born. There is nothing to spend yet, so reserve_in must be zero:
+        // the transaction funds the very first output from ordinary money.
+        // intent.amount = the creator's first buy (gross). No launch fee exists — the only
+        // cost of creating a coin is taking a real position in it, priced like anyone else's.
+        if (reserve_in != 0) return CurveError::BAD_AMOUNT;
+        if (intent.amount < CURVE_MIN_DEV_BUY_SAT) return CurveError::BAD_AMOUNT;
+        // The id must be the fingerprint of this transaction's own first input. Nobody can
+        // create a coin whose id they did not earn, and no id can ever be created twice.
+        if (tx.vin.empty()) return CurveError::BAD_OUTPUT;
+        if (intent.coin_id != CurveIdFromOutpoint(tx.vin[0].prevout)) return CurveError::BAD_COIN_ID;
+        const int64_t fee = CurveFee(intent.amount);
+        const int64_t net = intent.amount - fee;
+        int64_t tokens_out = 0, expected_reserve = 0;
+        if (!CurveBuy(0, net, tokens_out, expected_reserve)) return CurveError::BAD_AMOUNT;
+        if (reserve_out != expected_reserve) return CurveError::BAD_AMOUNT;
+        if (burned < fee) return CurveError::BAD_FEE;
+        if (intent.tokens_out != tokens_out) return CurveError::BAD_TOKENS;
+        if (!HasTokenOutput(tx, intent.coin_id, tokens_out, intent.pubkey)) return CurveError::BAD_TOKENS;
+        if (TokensInInputs(tx, intent.coin_id) != 0) return CurveError::BAD_TOKENS;
+        return CurveError::OK;
+    }
 
     case CurveOp::BUY: {
         // intent.amount = gross GBX the buyer commits (sat).
@@ -228,7 +265,24 @@ bool CheckCurveInputs(const CTransaction& tx,
         curve_height = coin.nHeight;
     }
 
-    if (curve_inputs == 0) return true;   // nothing to police
+    if (curve_inputs == 0) {
+        // Nothing spent — but a transaction that CREATES a curve out of ordinary money must
+        // still obey the rules, or a coin could be born with tokens nobody paid for.
+        if (!intent.has_value()) return true;
+        if (intent->op != CurveOp::CREATE) {
+            // Declaring an op without spending the curve it names is meaningless; but it is
+            // also harmless (no reserve moves), so let it through rather than invent a rule.
+            return true;
+        }
+        const CurveError cerr = CheckCurveTransition(tx, *intent, /*reserve_in=*/0,
+                                                     /*curve_height=*/nSpendHeight, nSpendHeight);
+        if (cerr == CurveError::OK) return true;
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-create");
+    }
+    if (curve_inputs > 0 && intent.has_value() && intent->op == CurveOp::CREATE) {
+        // You cannot "create" a curve that already exists.
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-already-exists");
+    }
     if (curve_inputs > 1) {
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
     }
@@ -243,6 +297,7 @@ bool CheckCurveInputs(const CTransaction& tx,
     case CurveError::CURVE_EXHAUSTED:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-exhausted");
     case CurveError::MULTIPLE_CURVES:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
     case CurveError::BAD_TOKENS:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-tokens");
+    case CurveError::BAD_COIN_ID:      return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-coin-id");
     case CurveError::NO_INTENT:        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-no-intent");
     }
     return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-unknown");

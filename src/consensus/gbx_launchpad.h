@@ -22,7 +22,17 @@
 namespace gbx {
 
 //! Curve operations declared in the OP_RETURN of a spending transaction.
-enum class CurveOp : uint8_t { BUY = 'B', SELL = 'S', REFUND = 'R', GRADUATE = 'G' };
+enum class CurveOp : uint8_t { CREATE = 'C', BUY = 'B', SELL = 'S', REFUND = 'R', GRADUATE = 'G' };
+
+//! A coin is born with a real position in it. Not a fee — the creator's own money, on the
+//! same curve as everyone else's, at the same price. Spam costs; launching costs nothing extra.
+static constexpr int64_t CURVE_MIN_DEV_BUY_SAT = 1 * 100000000LL;   //!< 1 GBX minimum first buy
+
+//! The identity of a coin is not a name someone picked — it is the fingerprint of the very
+//! output that funded its birth. An outpoint can be spent only once in history, so no two
+//! curves can ever share an id, and nobody can squat on someone else's coin.
+//!     coin_id = SHA256( txid || vout )  of the first input of the CREATE transaction
+uint256 CurveIdFromOutpoint(const COutPoint& out);
 
 //! Refund becomes available after this many blocks without any curve activity.
 //! 3s blocks => 30 days = 864,000 blocks. A dead coin returns the money it holds.
@@ -78,6 +88,7 @@ enum class CurveError {
     OK = 0,
     NO_INTENT,          //!< spends a curve UTXO but declares nothing
     BAD_TOKENS,         //!< tokens conjured, destroyed, or not proven to be held
+    BAD_COIN_ID,        //!< the coin id is not the fingerprint of the funding outpoint
     BAD_OUTPUT,         //!< the new curve UTXO is missing or malformed
     BAD_AMOUNT,         //!< the value moved does not match the formula
     BAD_FEE,            //!< the protocol fee was not burned
