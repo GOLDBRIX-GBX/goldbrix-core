@@ -7,8 +7,8 @@
 // The UTXO is a P2WSH of the canonical script:  <coin_id:32> OP_DROP OP_TRUE
 // Anyone can spend it — but consensus dictates what the spending transaction
 // must look like. No owner, no key, no server. The rules ARE the custodian.
-#ifndef BITCOIN_CONSENSUS_GBX_LAUNCHPAD_H
-#define BITCOIN_CONSENSUS_GBX_LAUNCHPAD_H
+#ifndef GBX_CONSENSUS_LAUNCHPAD_H
+#define GBX_CONSENSUS_LAUNCHPAD_H
 
 #include <consensus/gbx_curve.h>
 #include <crypto/sha256.h>
@@ -86,10 +86,10 @@ enum class CurveError {
 //!
 //! Called for any transaction that spends a curve UTXO. Given the reserve held by
 //! the spent UTXO, the intent declared in the OP_RETURN and the transaction's own
-//! outputs, decide whether the transition is legal. Nobody can take a satoshi out
+//! outputs, decide whether the transition is legal. Nobody can take a single unit out
 //! of a reserve except by the formula — not the creator, not the founder, nobody.
 //!
-//! @param[in] reserve_in       value of the spent curve UTXO (satoshi)
+//! @param[in] reserve_in       value of the spent curve UTXO (sat)
 //! @param[in] curve_height     height at which the spent curve UTXO was created
 //! @param[in] spend_height     height of the block spending it
 CurveError CheckCurveTransition(const CTransaction& tx,
@@ -104,4 +104,23 @@ CScript CurveBurnScript();
 
 } // namespace gbx
 
-#endif // BITCOIN_CONSENSUS_GBX_LAUNCHPAD_H
+namespace Consensus { struct Params; }
+class CCoinsViewCache;
+class TxValidationState;
+
+namespace gbx {
+
+//! Consensus entry point (IDEE V).
+//!
+//! Called right after Consensus::CheckTxInputs. If the transaction spends a curve
+//! reserve, the transition must obey the curve — otherwise the transaction is invalid.
+//! Before the activation height this is a no-op, so old blocks stay valid forever.
+[[nodiscard]] bool CheckCurveInputs(const CTransaction& tx,
+                                    TxValidationState& state,
+                                    const CCoinsViewCache& inputs,
+                                    int nSpendHeight,
+                                    const Consensus::Params& params);
+
+} // namespace gbx
+
+#endif // GBX_CONSENSUS_LAUNCHPAD_H

@@ -3,6 +3,10 @@
 
 #include <consensus/gbx_launchpad.h>
 
+#include <coins.h>
+#include <consensus/params.h>
+#include <consensus/validation.h>
+
 #include <cstring>
 
 namespace gbx {
@@ -106,7 +110,7 @@ CurveError CheckCurveTransition(const CTransaction& tx,
     switch (intent.op) {
 
     case CurveOp::BUY: {
-        // intent.amount = gross GBX the buyer commits (satoshi).
+        // intent.amount = gross GBX the buyer commits (sat).
         const int64_t fee = CurveFee(intent.amount);
         const int64_t net = intent.amount - fee;
         int64_t tokens_out = 0, expected_reserve = 0;
@@ -156,6 +160,54 @@ CurveError CheckCurveTransition(const CTransaction& tx,
     }
 
     return CurveError::NO_INTENT;
+}
+
+
+bool CheckCurveInputs(const CTransaction& tx,
+                      TxValidationState& state,
+                      const CCoinsViewCache& inputs,
+                      int nSpendHeight,
+                      const Consensus::Params& params)
+{
+    if (params.nLaunchpadHeight <= 0 || nSpendHeight < params.nLaunchpadHeight) return true; // not active yet
+
+    // Does this transaction spend a curve reserve? We only know once we have the intent:
+    // the coin_id in the OP_RETURN lets us rebuild the canonical scriptPubKey and compare.
+    const std::optional<CurveIntent> intent = ParseCurveIntent(tx);
+
+    // Find any input paying to a curve script. Without an intent we cannot know which coin
+    // it belongs to, so a curve UTXO can only be spent by a transaction that declares itself.
+    int64_t reserve_in = -1;
+    int curve_height = 0;
+    int curve_inputs = 0;
+
+    for (const CTxIn& in : tx.vin) {
+        const Coin& coin = inputs.AccessCoin(in.prevout);
+        if (coin.IsSpent()) continue;
+        if (!intent.has_value()) continue;
+        if (coin.out.scriptPubKey != CurveScriptPubKey(intent->coin_id)) continue;
+        ++curve_inputs;
+        reserve_in = coin.out.nValue;
+        curve_height = coin.nHeight;
+    }
+
+    if (curve_inputs == 0) return true;   // nothing to police
+    if (curve_inputs > 1) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
+    }
+
+    const CurveError err = CheckCurveTransition(tx, *intent, reserve_in, curve_height, nSpendHeight);
+    switch (err) {
+    case CurveError::OK:               return true;
+    case CurveError::BAD_AMOUNT:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-amount");
+    case CurveError::BAD_FEE:          return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-fee-not-burned");
+    case CurveError::BAD_OUTPUT:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-output");
+    case CurveError::NOT_IDLE:         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-not-idle");
+    case CurveError::CURVE_EXHAUSTED:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-exhausted");
+    case CurveError::MULTIPLE_CURVES:  return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
+    case CurveError::NO_INTENT:        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-no-intent");
+    }
+    return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-unknown");
 }
 
 } // namespace gbx

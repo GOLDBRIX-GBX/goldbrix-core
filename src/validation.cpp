@@ -15,6 +15,7 @@
 #include <consensus/consensus.h>
 #include <consensus/merkle.h>
 #include <consensus/tx_check.h>
+#include <consensus/gbx_launchpad.h>
 #include <consensus/tx_verify.h>
 #include <consensus/validation.h>
 #include <cuckoocache.h>
@@ -895,6 +896,10 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // The mempool holds txs for the next block, so pass height+1 to CheckTxInputs
     if (!Consensus::CheckTxInputs(tx, state, m_view, m_active_chainstate.m_chain.Height() + 1, ws.m_base_fees)) {
         return false; // state filled in by CheckTxInputs
+    }
+    // IDEE V: a transaction spending a launchpad curve must obey the curve.
+    if (!gbx::CheckCurveInputs(tx, state, m_view, m_active_chainstate.m_chain.Height() + 1, m_active_chainstate.m_chainman.GetConsensus())) {
+        return false; // state filled in by CheckCurveInputs
     }
 
     if (m_pool.m_opts.require_standard && !AreInputsStandard(tx, m_view)) {
@@ -2612,6 +2617,13 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         {
             CAmount txfee = 0;
             TxValidationState tx_state;
+            if (!gbx::CheckCurveInputs(tx, tx_state, view, pindex->nHeight, m_chainman.GetConsensus())) {
+                // IDEE V: a curve rule violation makes the whole block invalid.
+                state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                              tx_state.GetRejectReason(),
+                              tx_state.GetDebugMessage() + " in transaction " + tx.GetHash().ToString());
+                return false;
+            }
             if (!Consensus::CheckTxInputs(tx, tx_state, view, pindex->nHeight, txfee)) {
                 // Any transaction validation failure in ConnectBlock is a block consensus failure
                 state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,

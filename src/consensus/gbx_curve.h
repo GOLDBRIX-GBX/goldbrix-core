@@ -10,8 +10,8 @@
 //
 // All arithmetic is integer. Floating point is FORBIDDEN in consensus code:
 // two nodes must reach bit-identical results or the chain forks.
-#ifndef BITCOIN_CONSENSUS_GBX_CURVE_H
-#define BITCOIN_CONSENSUS_GBX_CURVE_H
+#ifndef GBX_CONSENSUS_CURVE_H
+#define GBX_CONSENSUS_CURVE_H
 
 #include <consensus/amount.h>
 #include <cstdint>
@@ -19,7 +19,7 @@
 namespace gbx {
 
 //! Virtual reserves defining the curve (identical to the values proven in production).
-static constexpr int64_t CURVE_V_GBX_SAT = 30000LL * COIN;      //!< 30,000 GBX in satoshi
+static constexpr int64_t CURVE_V_GBX_SAT = 30000LL * COIN;      //!< 30,000 GBX in sat
 static constexpr int64_t CURVE_V_TOKENS  = 1073000000LL;        //!< virtual token reserve
 static constexpr int64_t CURVE_TOKENS    = 800000000LL;         //!< real tokens sellable on the curve
 static constexpr int64_t CURVE_LP_TOKENS = 200000000LL;         //!< tokens reserved for the AMM pool
@@ -83,4 +83,4 @@ inline int64_t CurveFee(int64_t gross_sat)
 
 } // namespace gbx
 
-#endif // BITCOIN_CONSENSUS_GBX_CURVE_H
+#endif // GBX_CONSENSUS_CURVE_H
