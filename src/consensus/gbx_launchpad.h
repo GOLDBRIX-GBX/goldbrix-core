@@ -84,18 +84,27 @@ static constexpr int CURVE_REFUND_IDLE_BLOCKS = 864000;
 static constexpr int64_t CURVE_DUST_SAT = 546;
 
 //! Build the canonical witness script for a coin: <coin_id> OP_DROP OP_TRUE
-inline CScript CurveWitnessScript(const uint256& coin_id)
+//! IDEE X: the curve carries its own market memory. M = the largest trade (sat)
+//! seen in the window, h_M = the height that set it. Both travel IN the reserve
+//! UTXO itself — exactly like the pool carries its token side — so validation
+//! reads them locally from the revealed witness script: no index, no server,
+//! no key, reconstructible by anyone from the chain alone.
+inline CScript CurveWitnessScript(const uint256& coin_id, int64_t m_max, uint32_t h_m)
 {
     CScript s;
     s << std::vector<unsigned char>(coin_id.begin(), coin_id.end());
-    s << OP_DROP << OP_TRUE;
+    std::vector<unsigned char> m(8), h(4);
+    for (int i = 0; i < 8; ++i) m[i] = (unsigned char)((m_max >> (8*(7-i))) & 0xff);
+    for (int i = 0; i < 4; ++i) h[i] = (unsigned char)((h_m  >> (8*(3-i))) & 0xff);
+    s << m << h;
+    s << OP_2DROP << OP_DROP << OP_TRUE;
     return s;
 }
 
 //! Canonical scriptPubKey (P2WSH) holding a coin's reserve.
-inline CScript CurveScriptPubKey(const uint256& coin_id)
+inline CScript CurveScriptPubKey(const uint256& coin_id, int64_t m_max, uint32_t h_m)
 {
-    const CScript ws = CurveWitnessScript(coin_id);
+    const CScript ws = CurveWitnessScript(coin_id, m_max, h_m);
     uint256 h;
     CSHA256().Write(ws.data(), ws.size()).Finalize(h.begin());
     CScript spk;
@@ -106,10 +115,11 @@ inline CScript CurveScriptPubKey(const uint256& coin_id)
 //! Is this output a curve reserve? If yes, extract the coin_id.
 //! Recognition is purely local: we cannot invert SHA256, so the coin_id is carried
 //! in the OP_RETURN and verified by rebuilding the scriptPubKey from it.
-inline bool IsCurveOutput(const CTxOut& out, const uint256& coin_id)
-{
-    return out.scriptPubKey == CurveScriptPubKey(coin_id);
-}
+//! IDEE X: a curve output can no longer be recognized from coin_id alone (its
+//! script hash moves with M) — recognition happens at spend, from the revealed
+//! witness script, exactly like the pool. See ParseCurveWitnessScript.
+std::optional<std::pair<int64_t, uint32_t>> ParseCurveWitnessScript(
+    const std::vector<unsigned char>& ws_bytes, const uint256& coin_id);
 
 //! Parsed intent from the transaction's OP_RETURN.
 struct CurveIntent {
@@ -168,9 +178,12 @@ enum class CurveError {
 CurveError CheckCurveTransition(const CTransaction& tx,
                                 const CurveIntent& intent,
                                 int64_t reserve_in,
+                                int64_t m_in,
+                                uint32_t hm_in,
                                 int curve_height,
                                 int spend_height,
-                                int refund_idle_blocks);
+                                int refund_idle_blocks,
+                                int grad_window_blocks);
 
 //! Validate a trade against a graduated pool. Same philosophy: the pool has no owner,
 //! so the only thing that can move its money is the constant product itself.

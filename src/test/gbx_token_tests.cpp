@@ -20,7 +20,7 @@ static CTxOut Intent(CurveOp op,int64_t amount,int64_t tokens_out,const std::vec
     d.insert(d.end(), pk.begin(), pk.end());
     CScript s; s<<OP_RETURN<<d; return CTxOut(0,s);
 }
-static CTxOut Curve(int64_t v){ return CTxOut(v, CurveScriptPubKey(CID)); }
+static CTxOut Curve(int64_t v){ return CTxOut(v, CurveScriptPubKey(CID, 0, 0)); }
 static CTxOut Burn(int64_t v){ return CTxOut(v, CurveBurnScript()); }
 static CTxOut User(int64_t v){ CScript s; s<<OP_0<<std::vector<unsigned char>(20,0x11); return CTxOut(v,s); }
 static CTxOut Tok(int64_t amt,const std::vector<unsigned char>& pk){ return CTxOut(546, TokenScriptPubKey(CID,amt,pk)); }

@@ -23,7 +23,21 @@ static constexpr int64_t CURVE_V_GBX_SAT = 30000LL * COIN;      //!< 30,000 GBX 
 static constexpr int64_t CURVE_V_TOKENS  = 1073000000LL;        //!< virtual token reserve
 static constexpr int64_t CURVE_TOKENS    = 800000000LL;         //!< real tokens sellable on the curve
 static constexpr int64_t CURVE_LP_TOKENS = 200000000LL;         //!< tokens reserved for the AMM pool
-static constexpr int64_t CURVE_GRADUATION_SAT = 80000LL * COIN;  //!< a coin graduates when its reserve reaches this
+// ── IDEE X: GRADUATION BY THE COIN'S OWN ACTIVITY ─────────────────────────────
+//! A fixed threshold in money breaks at any large price move (too high and no
+//! coin ever graduates; too low and it filters nothing) — the same disease
+//! CURVE_MIN_DEV_BUY had, cured the same way: no absolute money value anywhere.
+//! What the pool must guarantee is DEPTH RELATIVE TO THE COIN'S OWN TRADES:
+//! slippage of an AMM x*y=k on a trade m against reserve R is m/R, so demanding
+//! R >= N*M (M = the largest trade seen in the last K blocks) caps the slippage
+//! of the biggest trade this market has ever produced at 1/N — at ANY price of
+//! GBX, forever, with no oracle. A whale cannot buy the graduation cheaply: her
+//! own giant buy becomes the new M and raises the bar she must clear (a single
+//! buy can never exceed R/(N-1) without postponing its own graduation).
+static constexpr int64_t CURVE_GRAD_DEPTH_N   = 20;             //!< pool >= N x the largest recent trade -> slippage <= 1/N (5%)
+static constexpr int64_t CURVE_GRAD_MIN_SAT   = 2000LL * COIN;  //!< absolute floor, anti-degenerate only: a pool of pocket dust serves nobody
+//!  (the window K lives in Consensus::Params — real on mainnet, small on regtest, like the refund window)
+static constexpr int64_t CURVE_GRADUATION_SAT = 80000LL * COIN;  //!< legacy fixed threshold (superseded by IDEE X; kept for the full-curve arithmetic)
 static constexpr int64_t POOL_FEE_BPS = 30;                      //!< 0.30% on AMM trades — BURNED, never collected
 static constexpr int64_t CURVE_FEE_BPS   = 50;                  //!< 0.50% on buy/sell — BURNED, never collected
 

@@ -134,6 +134,31 @@ std::optional<int64_t> ParsePoolWitnessScript(const std::vector<unsigned char>& 
     return tokens;
 }
 
+//! IDEE X: read (M, h_M) out of a revealed curve witness script.
+//! Recognition is purely local, exactly like the pool: the script carries its
+//! own state, validation rebuilds the P2WSH hash and compares. No index, no server.
+std::optional<std::pair<int64_t, uint32_t>> ParseCurveWitnessScript(
+    const std::vector<unsigned char>& ws_bytes, const uint256& coin_id)
+{
+    const CScript ws(ws_bytes.begin(), ws_bytes.end());
+    CScript::const_iterator pc = ws.begin();
+    opcodetype op;
+    std::vector<unsigned char> id, m, h;
+    if (!ws.GetOp(pc, op, id) || id.size() != 32) return std::nullopt;
+    if (!ws.GetOp(pc, op, m)  || m.size()  != 8)  return std::nullopt;
+    if (!ws.GetOp(pc, op, h)  || h.size()  != 4)  return std::nullopt;
+    if (!ws.GetOp(pc, op) || op != OP_2DROP)      return std::nullopt;
+    if (!ws.GetOp(pc, op) || op != OP_DROP)       return std::nullopt;
+    if (!ws.GetOp(pc, op) || op != OP_TRUE)       return std::nullopt;
+    if (pc != ws.end())                           return std::nullopt;
+    uint256 got; std::memcpy(got.begin(), id.data(), 32);
+    if (got != coin_id) return std::nullopt;
+    int64_t mv = 0; for (int i = 0; i < 8; ++i) mv = (mv << 8) | (int64_t)m[i];
+    if (mv < 0) return std::nullopt;
+    uint32_t hv = 0; for (int i = 0; i < 4; ++i) hv = (hv << 8) | (uint32_t)h[i];
+    return std::make_pair(mv, hv);
+}
+
 //! The canonical burn output: P2WPKH with an all-zero witness program.
 //! No private key can ever produce this hash160. Fees leave the money supply forever.
 CScript CurveBurnScript()
@@ -156,9 +181,9 @@ static int64_t BurnedAmount(const CTransaction& tx)
 
 //! Value of the (single) curve output for this coin in the transaction.
 //! Returns -1 if there is more than one; 0 if there is none (the curve is being closed).
-static int64_t CurveOutputValue(const CTransaction& tx, const uint256& coin_id)
+static int64_t CurveOutputValue(const CTransaction& tx, const uint256& coin_id, int64_t m_out, uint32_t hm_out)
 {
-    const CScript spk = CurveScriptPubKey(coin_id);
+    const CScript spk = CurveScriptPubKey(coin_id, m_out, hm_out);
     int64_t value = 0;
     int found = 0;
     for (const CTxOut& out : tx.vout) {
@@ -186,13 +211,50 @@ static bool HasTokenOutput(const CTransaction& tx, const uint256& coin_id, int64
 CurveError CheckCurveTransition(const CTransaction& tx,
                                 const CurveIntent& intent,
                                 int64_t reserve_in,
+                                int64_t m_in,
+                                uint32_t hm_in,
                                 int curve_height,
                                 int spend_height,
-                                int refund_idle_blocks)
+                                int refund_idle_blocks,
+                                int grad_window_blocks)
 {
     if (reserve_in < 0) return CurveError::BAD_AMOUNT;
 
-    const int64_t reserve_out = CurveOutputValue(tx, intent.coin_id);
+    // IDEE X: the market memory this transition must write into the new reserve UTXO.
+    // A REFUND is not a market trade (it is THE LAW, the user's own money coming home)
+    // and a GRADUATE recreates no curve — both leave (M, h_M) untouched.
+    int64_t m_out = m_in; uint32_t hm_out = hm_in; bool m_updated = false;
+    {
+        int64_t trade = 0;
+        if (intent.op == CurveOp::CREATE || intent.op == CurveOp::BUY) {
+            trade = intent.amount - CurveFee(intent.amount);
+        } else if (intent.op == CurveOp::SELL) {
+            int64_t g = 0, er = 0;
+            if (CurveSell(reserve_in, intent.amount, g, er)) trade = g;
+        }
+        if (trade > 0) {
+            const bool expired = (hm_in != 0) && (spend_height - (int)hm_in > grad_window_blocks);
+            if (expired || trade > m_out) { m_out = trade; m_updated = true; }
+        }
+    }
+    // A client signs BEFORE knowing which block will mine it, so when M updates the
+    // new stamp h_M is DECLARED by the client in the output script; consensus demands
+    // only that the stamp is FRESH (slack = CREATE_POW_MAX_AGE, the same freshness the
+    // create proof lives by). A stale stamp cannot keep M alive — it must be recent —
+    // and M itself is pure arithmetic, so nothing here is taken on trust.
+    int64_t reserve_out;
+    if (!m_updated) {
+        reserve_out = CurveOutputValue(tx, intent.coin_id, m_out, hm_out);
+    } else {
+        reserve_out = 0;
+        for (int d = 0; d <= CREATE_POW_MAX_AGE && spend_height - d >= 0; ++d) {
+            const int64_t v = CurveOutputValue(tx, intent.coin_id, m_out, (uint32_t)(spend_height - d));
+            if (v == -1) return CurveError::BAD_OUTPUT;          // duplicates = malformed
+            if (v > 0) { reserve_out = v; hm_out = (uint32_t)(spend_height - d); break; }
+        }
+        // nothing found -> reserve_out stays 0: the closing paths (last SELL/REFUND,
+        // GRADUATE) already treat 0 as "no curve recreated" and judge it themselves.
+    }
     const int64_t burned = BurnedAmount(tx);
 
     switch (intent.op) {
@@ -286,7 +348,19 @@ CurveError CheckCurveTransition(const CTransaction& tx,
 
     case CurveOp::GRADUATE: {
         // Anyone may trigger it — it is not a privilege, it is a fact about the reserve.
-        if (reserve_in < CURVE_GRADUATION_SAT) return CurveError::NOT_GRADUATED;
+        // IDEE X: graduation is legal when EITHER
+        //  (a) the curve is FULL — every token sold is the supreme proof of demand;
+        //      no trade is ever blocked waiting for a threshold, OR
+        //  (b) the reserve is deep enough for THIS coin's own market: R >= N*M
+        //      caps post-graduation slippage of the largest recent trade at 1/N,
+        //      at any price of GBX, forever, with no oracle. M is forgotten once
+        //      the window passes; a whale's giant buy raises her own bar.
+        const bool x_full = (CurveTokensSold(reserve_in) >= CURVE_TOKENS);
+        const bool x_m_live = (hm_in != 0) && (spend_height - (int)hm_in <= grad_window_blocks);
+        const int64_t x_m_eff = x_m_live ? m_in : 0;
+        const bool x_deep = reserve_in >= CURVE_GRAD_MIN_SAT &&
+                            reserve_in >= x_m_eff * CURVE_GRAD_DEPTH_N;
+        if (!x_full && !x_deep) return CurveError::NOT_GRADUATED;
         // The curve must not survive: no curve output may be recreated.
         if (reserve_out != 0) return CurveError::BAD_OUTPUT;
         // The whole reserve moves into the pool, together with the tokens that were never
@@ -425,14 +499,22 @@ bool CheckCurveInputs(const CTransaction& tx,
     int curve_height = 0;
     int curve_inputs = 0;
 
+    int64_t m_in = 0; uint32_t hm_in = 0;
     for (const CTxIn& in : tx.vin) {
         const Coin& coin = inputs.AccessCoin(in.prevout);
         if (coin.IsSpent()) continue;
         if (!intent.has_value()) continue;
-        if (coin.out.scriptPubKey != CurveScriptPubKey(intent->coin_id)) continue;
+        // IDEE X: the curve script now carries (M, h_M), so its hash moves with the
+        // market. Recognition happens from the revealed witness, exactly like the pool.
+        const CScriptWitness& wit = in.scriptWitness;
+        if (wit.stack.empty()) continue;
+        const auto cw = ParseCurveWitnessScript(wit.stack.back(), intent->coin_id);
+        if (!cw.has_value()) continue;
+        if (coin.out.scriptPubKey != CurveScriptPubKey(intent->coin_id, cw->first, cw->second)) continue;
         ++curve_inputs;
         reserve_in = coin.out.nValue;
         curve_height = coin.nHeight;
+        m_in = cw->first; hm_in = cw->second;
     }
 
     // Is a pool being spent? Its script is revealed in the witness, carrying the token side.
@@ -467,9 +549,9 @@ bool CheckCurveInputs(const CTransaction& tx,
         if (params.nLaunchpadHeight > 0 && intent->create_pow.size() != CREATE_POW_LEN) {
             return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-create-no-pow");
         }
-        const CurveError cerr = CheckCurveTransition(tx, *intent, /*reserve_in=*/0,
+        const CurveError cerr = CheckCurveTransition(tx, *intent, /*reserve_in=*/0, /*m_in=*/0, /*hm_in=*/0,
                                                      /*curve_height=*/nSpendHeight, nSpendHeight,
-                                                     params.nCurveRefundIdleBlocks);
+                                                     params.nCurveRefundIdleBlocks, params.nCurveGradWindowBlocks);
         if (cerr == CurveError::OK) return true;
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-create");
     }
@@ -481,7 +563,7 @@ bool CheckCurveInputs(const CTransaction& tx,
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
     }
 
-    const CurveError err = CheckCurveTransition(tx, *intent, reserve_in, curve_height, nSpendHeight, params.nCurveRefundIdleBlocks);
+    const CurveError err = CheckCurveTransition(tx, *intent, reserve_in, m_in, hm_in, curve_height, nSpendHeight, params.nCurveRefundIdleBlocks, params.nCurveGradWindowBlocks);
     switch (err) {
     case CurveError::OK:               return true;
     case CurveError::BAD_AMOUNT:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-amount");

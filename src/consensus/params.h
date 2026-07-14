@@ -122,6 +122,7 @@ struct Params {
     int nLwmaActivationHeight{0};      // 0 = LWMA disabled (legacy Bitcoin DAA)
     int nLaunchpadHeight{0};           // 0 = disabled; >=height: launchpad curves enforced by consensus (IDEE V)
     int nCurveRefundIdleBlocks{864000}; // IDEE V: blocks of no-trade before a curve becomes refundable (mainnet default = 30 days @3s)
+    int nCurveGradWindowBlocks{201600}; // IDEE X: window in which a coin's largest trade M binds graduation (mainnet default = 7 days @3s); after it, M is forgotten and the bar breathes back down
     int nLwmaFixHeight{0};             // 0 = disabled; >=height: corrected LWMA weighting (/N) + sane t floor
     int nLwmaWindowSize{45};           // Standard N=45 for LWMA-3
     int64_t nLwmaTargetSpacing{120};   // Target 120s block time post-activation
