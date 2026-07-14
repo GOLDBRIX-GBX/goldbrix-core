@@ -2,6 +2,10 @@
 // Distributed under the MIT software license.
 
 #include <consensus/gbx_launchpad.h>
+#include <arith_uint256.h>
+#include <hash.h>
+#include <pow.h>
+#include <primitives/block.h>
 
 #include <coins.h>
 #include <consensus/params.h>
@@ -38,11 +42,16 @@ std::optional<CurveIntent> ParseCurveIntent(const CTransaction& tx)
         opcodetype opcode;
         std::vector<unsigned char> data;
         if (!spk.GetOp(pc, opcode, data)) continue;
-        if (data.size() != CURVE_PAYLOAD_LEN) continue;
+        // Payload is CURVE_PAYLOAD_LEN (every op) or CURVE_PAYLOAD_LEN + CREATE_POW_LEN
+        // (a CREATE, which carries its 80-byte proof of work right after the payload).
+        const bool with_pow = (data.size() == CURVE_PAYLOAD_LEN + CREATE_POW_LEN);
+        if (data.size() != CURVE_PAYLOAD_LEN && !with_pow) continue;
         if (std::memcmp(data.data(), CURVE_TAG, CURVE_TAG_LEN) != 0) continue;
 
         const unsigned char op_byte = data[CURVE_TAG_LEN];
         if (!IsKnownOp(op_byte)) continue;
+        // Only a CREATE may carry a proof; any other op with extra bytes is malformed.
+        if (with_pow && static_cast<CurveOp>(op_byte) != CurveOp::CREATE) continue;
 
         // Two curve intents in one transaction = ambiguous. Reject the whole thing.
         if (found.has_value()) return std::nullopt;
@@ -61,6 +70,10 @@ std::optional<CurveIntent> ParseCurveIntent(const CTransaction& tx)
         intent.pubkey.assign(p + 16, p + 16 + 33);
         if (intent.pubkey[0] != 0x02 && intent.pubkey[0] != 0x03) return std::nullopt; // compressed only
 
+        if (with_pow) {
+            intent.create_pow.assign(data.data() + CURVE_PAYLOAD_LEN,
+                                     data.data() + CURVE_PAYLOAD_LEN + CREATE_POW_LEN);
+        }
         found = intent;
     }
     return found;
@@ -346,6 +359,54 @@ CurveError CheckPoolTransition(const CTransaction& tx,
     return CurveError::OK;
 }
 
+//! IDEE W — verify the proof of work attached to a CREATE. Pure, deterministic.
+bool CheckCreatePoW(const std::vector<unsigned char>& pow80,
+                    const uint256& coin_id,
+                    unsigned int prev_nbits,
+                    int prev_height,
+                    int spend_height,
+                    const Consensus::Params& params)
+{
+    if (pow80.size() != CREATE_POW_LEN) return false;
+
+    // Reconstruct the header fields we care about from the 80 raw bytes:
+    //   version(4) | prevhash(32) | merkleroot(32) | time(4) | bits(4) | nonce(4)
+    // 1) AuxPoW is forbidden: the proof must be direct work, never a merged-mining
+    //    by-product bought from a pool.
+    const int32_t version = (int32_t)((uint32_t)pow80[0]        | ((uint32_t)pow80[1] << 8)
+                                    | ((uint32_t)pow80[2] << 16) | ((uint32_t)pow80[3] << 24));
+    if (version & VERSION_AUXPOW) return false;
+
+    // 2) the merkle root (bytes 36..67) must BE the coin_id — the proof is bound to
+    //    this coin and can be reused for no other.
+    if (std::memcmp(pow80.data() + 36, coin_id.begin(), 32) != 0) return false;
+
+    // 3) freshness: the proof must be built on a recent block (checked by the caller
+    //    via prev_height); reject stockpiled work.
+    if (prev_height < 0 || spend_height - prev_height > CREATE_POW_MAX_AGE) return false;
+
+    // 4) the work itself: SHA256d(header) must be under a target derived from the
+    //    network's own difficulty at prev — no separate retarget needed.
+    uint256 powhash;
+    CHash256().Write(std::span<const unsigned char>(pow80.data(), CREATE_POW_LEN)).Finalize(std::span<unsigned char>(powhash.begin(), 32));
+
+    auto bnTarget = DeriveTarget(prev_nbits, params.powLimit);
+    if (!bnTarget) return false;
+    // Ease the network target by 2^SHIFT (a near-block is 32x easier than a real block),
+    // but never below powLimit — the proof can never be weaker than the minimum PoW.
+    const arith_uint256 powLimit = UintToArith256(params.powLimit);
+    arith_uint256 t = *bnTarget;
+    for (int i = 0; i < CREATE_POW_SHIFT; ++i) {
+        arith_uint256 nt = t << 1;
+        if (nt >> 1 != t || nt > powLimit) { t = powLimit; break; }  // overflow or past the floor -> clamp
+        t = nt;
+    }
+    if (t > powLimit) t = powLimit;
+    if (UintToArith256(powhash) > t) return false;
+
+    return true;
+}
+
 bool CheckCurveInputs(const CTransaction& tx,
                       TxValidationState& state,
                       const CCoinsViewCache& inputs,
@@ -399,6 +460,12 @@ bool CheckCurveInputs(const CTransaction& tx,
             // Declaring an op without spending the curve it names is meaningless; but it is
             // also harmless (no reserve moves), so let it through rather than invent a rule.
             return true;
+        }
+        // IDEE W: a coin is born of WORK. No proof, no coin — not on any code path.
+        // (The proof's validity against the chain is checked by the caller, which can
+        // look up the previous block; here we make its ABSENCE impossible.)
+        if (params.nLaunchpadHeight > 0 && intent->create_pow.size() != CREATE_POW_LEN) {
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-create-no-pow");
         }
         const CurveError cerr = CheckCurveTransition(tx, *intent, /*reserve_in=*/0,
                                                      /*curve_height=*/nSpendHeight, nSpendHeight,

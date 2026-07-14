@@ -784,6 +784,41 @@ private:
     }
 };
 
+
+/** IDEE W: a CREATE must carry real, fresh, coin-bound SHA256d work.
+ *  Pure rules live in gbx::CheckCreatePoW; here we supply the one thing it cannot
+ *  know by itself — the block its proof was mined on. Cost: one index lookup and
+ *  one hash, only for transactions that actually create a coin. */
+static bool GbxCheckCreateWork(const CTransaction& tx,
+                               TxValidationState& state,
+                               const CBlockIndex* tip_or_prev,
+                               node::BlockManager& blockman,
+                               int spend_height,
+                               const Consensus::Params& params)
+    EXCLUSIVE_LOCKS_REQUIRED(cs_main)
+{
+    if (params.nLaunchpadHeight <= 0 || spend_height < params.nLaunchpadHeight) return true;
+
+    const std::optional<gbx::CurveIntent> intent = gbx::ParseCurveIntent(tx);
+    if (!intent.has_value() || intent->op != gbx::CurveOp::CREATE) return true;
+
+    if (intent->create_pow.size() != gbx::CREATE_POW_LEN) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-create-no-pow");
+    }
+    // hashPrevBlock lives at bytes 4..35 of the header.
+    uint256 prevhash;
+    std::memcpy(prevhash.begin(), intent->create_pow.data() + 4, 32);
+    const CBlockIndex* prev = blockman.LookupBlockIndex(prevhash);
+    if (prev == nullptr) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-create-pow-unknown-prev");
+    }
+    if (!gbx::CheckCreatePoW(intent->create_pow, intent->coin_id,
+                             prev->nBits, prev->nHeight, spend_height, params)) {
+        return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-create-bad-pow");
+    }
+    return true;
+}
+
 bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
 {
     AssertLockHeld(cs_main);
@@ -900,6 +935,13 @@ bool MemPoolAccept::PreChecks(ATMPArgs& args, Workspace& ws)
     // IDEE V: a transaction spending a launchpad curve must obey the curve.
     if (!gbx::CheckCurveInputs(tx, state, m_view, m_active_chainstate.m_chain.Height() + 1, m_active_chainstate.m_chainman.GetConsensus())) {
         return false; // state filled in by CheckCurveInputs
+    }
+    // IDEE W: a coin is born of work, not of money.
+    if (!GbxCheckCreateWork(tx, state, m_active_chainstate.m_chain.Tip(),
+                            m_active_chainstate.m_blockman,
+                            m_active_chainstate.m_chain.Height() + 1,
+                            m_active_chainstate.m_chainman.GetConsensus())) {
+        return false;
     }
 
     if (m_pool.m_opts.require_standard && !AreInputsStandard(tx, m_view)) {
@@ -2617,6 +2659,13 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         {
             CAmount txfee = 0;
             TxValidationState tx_state;
+            if (!GbxCheckCreateWork(tx, tx_state, pindex->pprev, m_blockman,
+                                    pindex->nHeight, m_chainman.GetConsensus())) {
+                state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
+                              tx_state.GetRejectReason(),
+                              tx_state.GetDebugMessage() + " in transaction " + tx.GetHash().ToString());
+                return false;
+            }
             if (!gbx::CheckCurveInputs(tx, tx_state, view, pindex->nHeight, m_chainman.GetConsensus())) {
                 // IDEE V: a curve rule violation makes the whole block invalid.
                 state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,

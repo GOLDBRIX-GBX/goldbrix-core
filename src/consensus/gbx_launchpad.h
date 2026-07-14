@@ -19,6 +19,8 @@
 #include <optional>
 #include <vector>
 
+namespace Consensus { struct Params; }
+
 namespace gbx {
 
 //! Curve operations declared in the OP_RETURN of a spending transaction.
@@ -27,7 +29,30 @@ enum class CurveOp : uint8_t { CREATE = 'C', BUY = 'B', SELL = 'S', REFUND = 'R'
 
 //! A coin is born with a real position in it. Not a fee — the creator's own money, on the
 //! same curve as everyone else's, at the same price. Spam costs; launching costs nothing extra.
-static constexpr int64_t CURVE_MIN_DEV_BUY_SAT = 1 * 100000000LL;   //!< 1 GBX minimum first buy
+static constexpr int64_t CURVE_MIN_DEV_BUY_SAT = 1;                 //!< IDEE W: no minimum in money. The first buy is mandatory (a real
+                                                                    //!< position on the same curve as everyone else), but its size is the
+                                                                    //!< creator's choice. The barrier to creating a coin is WORK, not capital:
+                                                                    //!< a whale and a phone pay the same price — time. See CREATE_POW below.
+
+//! ── IDEE W: CREATE COSTS WORK, NOT MONEY ──────────────────────────────────────
+//! A coin is born only if its creator did real SHA256d work FOR THIS COIN.
+//!
+//!   proof = an 80-byte GoldBrix header whose merkle root IS the coin_id.
+//!
+//! Why this shape:
+//!  · merkle == coin_id  → the proof is bound to this coin and no other. Change the
+//!    coin and the hash changes, so the work must be redone. It cannot be reused,
+//!    resold, or stolen: coin_id is the fingerprint of an outpoint only you can spend.
+//!  · hashPrevBlock must be a RECENT block → work cannot be stockpiled in advance.
+//!  · AuxPoW is FORBIDDEN here. A merged-mining pool produces proofs as a by-product
+//!    at zero marginal cost; allowing it would let anyone BUY the barrier instead of
+//!    doing it, which puts capital back in charge. The work must be done on purpose.
+//!  · The difficulty of the proof is derived from the network's own difficulty, so it
+//!    needs no retarget of its own: as the chain grows, creating stays proportionally
+//!    the same amount of phone-work forever, at any price of GBX.
+static constexpr size_t CREATE_POW_LEN = 80;                        //!< a bare block header
+static constexpr int CREATE_POW_MAX_AGE = 100;                      //!< blocks: the proof must be fresh
+static constexpr int CREATE_POW_SHIFT = 5;                          //!< target = network target << 5 (32x easier than a block: ~a few minutes of phone work). Calibrated s42 on measured hashrate; adjustable ONLY before activation.
 
 //! The identity of a coin is not a name someone picked — it is the fingerprint of the very
 //! output that funded its birth. An outpoint can be spent only once in history, so no two
@@ -93,7 +118,23 @@ struct CurveIntent {
     int64_t amount{0};        //!< BUY: gbx_in (gross) · SELL/REFUND: tokens burned back
     int64_t tokens_out{0};    //!< tokens minted to the payload pubkey (BUY) or returned as change (SELL/REFUND)
     std::vector<unsigned char> pubkey;  //!< 33 bytes: who receives the tokens
+    std::vector<unsigned char> create_pow;  //!< IDEE W: 80 bytes, CREATE only. Empty for every other op.
 };
+
+//! IDEE W — is the attached proof of work valid for this coin?
+//! Pure function: it is given the values, never the chain, so it stays trivially
+//! deterministic and testable. The caller (validation) looks the previous block up.
+//! @param[in] pow80        the 80-byte header carried by the CREATE
+//! @param[in] coin_id      the coin being born (must equal the header's merkle root)
+//! @param[in] prev_nbits   nBits of the block the proof was mined on
+//! @param[in] prev_height  height of that block
+//! @param[in] spend_height height at which the CREATE is being included
+bool CheckCreatePoW(const std::vector<unsigned char>& pow80,
+                    const uint256& coin_id,
+                    unsigned int prev_nbits,
+                    int prev_height,
+                    int spend_height,
+                    const Consensus::Params& params);
 
 //! Extract the single curve intent from a transaction, if any.
 //! Format: OP_RETURN "GBX:C:" <op:1> <coin_id:32> <amount:8> <tokens_out:8> <pubkey:33> (big-endian)
@@ -146,7 +187,6 @@ CScript CurveBurnScript();
 
 } // namespace gbx
 
-namespace Consensus { struct Params; }
 class CCoinsViewCache;
 class TxValidationState;
 
