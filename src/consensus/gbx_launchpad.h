@@ -128,7 +128,8 @@ CurveError CheckCurveTransition(const CTransaction& tx,
                                 const CurveIntent& intent,
                                 int64_t reserve_in,
                                 int curve_height,
-                                int spend_height);
+                                int spend_height,
+                                int refund_idle_blocks);
 
 //! Validate a trade against a graduated pool. Same philosophy: the pool has no owner,
 //! so the only thing that can move its money is the constant product itself.

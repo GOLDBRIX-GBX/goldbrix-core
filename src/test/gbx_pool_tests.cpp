@@ -26,7 +26,7 @@ static CurveError RunG(std::vector<CTxOut> outs,int64_t reserve_in){
     for(auto&o:outs) m.vout.push_back(o);
     m.vout.push_back(Intent(CurveOp::GRADUATE,0,0));
     CTransaction tx(m); auto i=ParseCurveIntent(tx); if(!i) return CurveError::NO_INTENT;
-    return CheckCurveTransition(tx,*i,reserve_in,0,1000000);
+    return CheckCurveTransition(tx,*i,reserve_in,0,1000000,CURVE_REFUND_IDLE_BLOCKS);
 }
 static CurveError RunP(std::vector<CTxOut> outs,CurveOp op,int64_t amount,int64_t tok_out,
                        int64_t pg,int64_t pt,int64_t held=0){

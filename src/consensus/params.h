@@ -121,6 +121,7 @@ struct Params {
     // ATG-LWMA V2.23: LWMA-3 difficulty algorithm
     int nLwmaActivationHeight{0};      // 0 = LWMA disabled (legacy Bitcoin DAA)
     int nLaunchpadHeight{0};           // 0 = disabled; >=height: launchpad curves enforced by consensus (IDEE V)
+    int nCurveRefundIdleBlocks{864000}; // IDEE V: blocks of no-trade before a curve becomes refundable (mainnet default = 30 days @3s)
     int nLwmaFixHeight{0};             // 0 = disabled; >=height: corrected LWMA weighting (/N) + sane t floor
     int nLwmaWindowSize{45};           // Standard N=45 for LWMA-3
     int64_t nLwmaTargetSpacing{120};   // Target 120s block time post-activation

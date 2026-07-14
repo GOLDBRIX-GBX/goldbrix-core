@@ -174,7 +174,8 @@ CurveError CheckCurveTransition(const CTransaction& tx,
                                 const CurveIntent& intent,
                                 int64_t reserve_in,
                                 int curve_height,
-                                int spend_height)
+                                int spend_height,
+                                int refund_idle_blocks)
 {
     if (reserve_in < 0) return CurveError::BAD_AMOUNT;
 
@@ -246,7 +247,7 @@ CurveError CheckCurveTransition(const CTransaction& tx,
         // A coin nobody has traded for CURVE_REFUND_IDLE_BLOCKS gives the money back.
         // Pro-rata: the holder's share of the tokens in circulation buys the same share
         // of the reserve. The curve empties to exactly zero when the last holder exits.
-        if (spend_height - curve_height < CURVE_REFUND_IDLE_BLOCKS) return CurveError::NOT_IDLE;
+        if (spend_height - curve_height < refund_idle_blocks) return CurveError::NOT_IDLE;
         const int64_t sold = CurveTokensSold(reserve_in);
         if (sold <= 0 || intent.amount <= 0 || intent.amount > sold) return CurveError::BAD_AMOUNT;
         const int64_t held_r = TokensInInputs(tx, intent.coin_id);
@@ -400,7 +401,8 @@ bool CheckCurveInputs(const CTransaction& tx,
             return true;
         }
         const CurveError cerr = CheckCurveTransition(tx, *intent, /*reserve_in=*/0,
-                                                     /*curve_height=*/nSpendHeight, nSpendHeight);
+                                                     /*curve_height=*/nSpendHeight, nSpendHeight,
+                                                     params.nCurveRefundIdleBlocks);
         if (cerr == CurveError::OK) return true;
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-create");
     }
@@ -412,7 +414,7 @@ bool CheckCurveInputs(const CTransaction& tx,
         return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-multiple-inputs");
     }
 
-    const CurveError err = CheckCurveTransition(tx, *intent, reserve_in, curve_height, nSpendHeight);
+    const CurveError err = CheckCurveTransition(tx, *intent, reserve_in, curve_height, nSpendHeight, params.nCurveRefundIdleBlocks);
     switch (err) {
     case CurveError::OK:               return true;
     case CurveError::BAD_AMOUNT:       return state.Invalid(TxValidationResult::TX_CONSENSUS, "gbx-curve-bad-amount");

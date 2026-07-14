@@ -43,7 +43,7 @@ static CurveError Run(std::vector<CTxOut> outs, CurveOp op, int64_t amount, int6
     CTransaction tx(m);
     auto in_ = ParseCurveIntent(tx);
     if(!in_) return CurveError::NO_INTENT;
-    return CheckCurveTransition(tx, *in_, reserve_in, 0, spend_h);
+    return CheckCurveTransition(tx, *in_, reserve_in, 0, spend_h, CURVE_REFUND_IDLE_BLOCKS);
 }
 
 int main(){
