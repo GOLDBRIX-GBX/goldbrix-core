@@ -37,6 +37,8 @@ static constexpr int64_t CURVE_LP_TOKENS = 200000000LL;         //!< tokens rese
 static constexpr int64_t CURVE_GRAD_DEPTH_N   = 20;             //!< pool >= N x the largest recent trade -> slippage <= 1/N (5%)
 static constexpr int64_t CURVE_GRAD_MIN_SAT   = 2000LL * COIN;  //!< absolute floor, anti-degenerate only: a pool of pocket dust serves nobody
 //!  (the window K lives in Consensus::Params — real on mainnet, small on regtest, like the refund window)
+//! FOUNDER-LOCKED 2026-07-15 (s44): N=20, K=201600, R_MIN=2000 GBX — confirmed on the
+//! proven numbers (23/23 unit, 6/6 live). Immutable after R.
 static constexpr int64_t CURVE_GRADUATION_SAT = 80000LL * COIN;  //!< legacy fixed threshold (superseded by IDEE X; kept for the full-curve arithmetic)
 static constexpr int64_t POOL_FEE_BPS = 30;                      //!< 0.30% on AMM trades — BURNED, never collected
 static constexpr int64_t CURVE_FEE_BPS   = 50;                  //!< 0.50% on buy/sell — BURNED, never collected
