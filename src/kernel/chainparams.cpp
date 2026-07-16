@@ -110,7 +110,7 @@ public:
         consensus.nLwmaActivationHeight = 20000;
         consensus.nLwmaWindowSize = 45;
         consensus.nLwmaTargetSpacing = 3;  // V31: 3s blocks (was 120s)
-        consensus.nLaunchpadHeight = 0;     // IDEE V: consensus launchpad — DISABLED until the activation height is set
+        consensus.nLaunchpadHeight = 2720000; // IDEE V+W+X: launchpad activation height (LOCKED s48) — one hard-fork package
         consensus.nCurveRefundIdleBlocks = 864000; // IDEE V: 30 days @3s before refund — mainnet value, rigid
         consensus.nCurveGradWindowBlocks = 201600; // IDEE X: 7 days @3s — the window in which a coin's largest trade binds its graduation bar
         consensus.nLwmaFixHeight = 2200000; // LWMA weighting fix hard fork
