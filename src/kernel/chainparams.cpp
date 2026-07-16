@@ -110,6 +110,9 @@ public:
         consensus.nLwmaActivationHeight = 20000;
         consensus.nLwmaWindowSize = 45;
         consensus.nLwmaTargetSpacing = 3;  // V31: 3s blocks (was 120s)
+        consensus.nLaunchpadHeight = 2720000; // IDEE V+W+X: launchpad activation height (LOCKED s48) — one hard-fork package
+        consensus.nCurveRefundIdleBlocks = 864000; // IDEE V: 30 days @3s before refund — mainnet value, rigid
+        consensus.nCurveGradWindowBlocks = 201600; // IDEE X: 7 days @3s — the window in which a coin's largest trade binds its graduation bar
         consensus.nLwmaFixHeight = 2200000; // LWMA weighting fix hard fork
         consensus.nV31ForkHeight = 20000;
         consensus.nV31HalvingInterval = 28000000;
@@ -559,6 +562,9 @@ public:
         consensus.nPowTargetSpacing = 10 * 60;
         // V31 REGTEST PROTOTIP: fork @ block 100, halving every 1000 blocks
         consensus.nV31ForkHeight = 100;
+        consensus.nLaunchpadHeight = 1;     // IDEE V active from the start on regtest
+        consensus.nCurveRefundIdleBlocks = 100;    // IDEE V: short idle window on regtest so REFUND is testable (mainnet stays 864000)
+        consensus.nCurveGradWindowBlocks = 30;     // IDEE X: short window on regtest so expiry is testable (mainnet stays 201600)
         consensus.nLwmaFixHeight = 200;
         consensus.nV31HalvingInterval = 1000;
         consensus.nMaxReorgDepth = 10;
