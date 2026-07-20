@@ -153,7 +153,7 @@ redirect fees, or drain funds.
 ## The Founder
 
 <p align="center">
-  <a href="#the-endgame-no-key"><img src="branding/gideon-brick.png" alt="Gideon Brick" width="180"></a>
+  <a href="https://goldbrix.app"><img src="branding/gideon-brick.png" alt="Gideon Brick" width="180"></a>
 </p>
 
 GoldBrix was laid down, brick by brick, by an anonymous builder known only as
