@@ -1,8 +1,6 @@
 # GoldBrix Core — reproducible build checksums
-# Tag: v30-gbx-4
-# Commit: b81097e1fc88
+# Tag: v31-gbx-launchpad
+# Commit: 1747c8e2d817
 # Platform: x86_64-linux-gnu
 # Built with GNU Guix (contrib/guix)
-1175ec1132a9e48e5bf142073c90212a2f5d13a2b038720cf53a5e1a76f99d9e  goldbrix-b81097e1fc88.tar.gz
-e053f006e3372fe9732fa5771136389e9c75a8580a30299bb58f1cbf3bb9e300  goldbrix-b81097e1fc88-x86_64-linux-gnu-debug.tar.gz
-0ef1458b6bbd923fc2fc818dc45fffd13f343f0d96bdecf0bb7fc9b4535f2d75  goldbrix-b81097e1fc88-x86_64-linux-gnu.tar.gz
+bdbac8ac96e7ce62bc060ba908667cd276abc5ca53c85591d8c3253e4f14258e  goldbrix-1747c8e2d817-x86_64-linux-gnu.tar.gz

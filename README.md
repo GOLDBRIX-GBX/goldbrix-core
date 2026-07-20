@@ -14,7 +14,7 @@
   <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
   <img alt="Consensus" src="https://img.shields.io/badge/consensus-PoW%20SHA--256d-orange.svg">
   <img alt="Max supply" src="https://img.shields.io/badge/max%20supply-15%2C000%2C000%20GBX-yellow.svg">
-  <img alt="Fees" src="https://img.shields.io/badge/all%20fees-100%25%20burned-red.svg">
+  <img alt="Fees" src="https://img.shields.io/badge/launchpad%20fees-100%25%20burned-red.svg">
 </p>
 
 ---
@@ -25,7 +25,7 @@
 - **Android APK:** [downloads](https://goldbrix.app/downloads/) or [GitHub Releases](https://github.com/GOLDBRIX-GBX/goldbrix-core/releases/latest) — verify SHA-256 against [version.json](https://goldbrix.app/version.json)
 - **Explorer:** [explorer.goldbrix.app](https://explorer.goldbrix.app)
 - **Mine (0 fee, non-custodial):** `stratum+tcp://goldbrix.app:3333` — [guide](https://github.com/GOLDBRIX-GBX/goldbrix-tools/blob/main/docs/MINING.md) · live stats: [/pool-info](https://goldbrix.app/pool-info)
-- **Run a node:** [guide](https://goldbrix.app/run-node) · release checksums: [SHA256SUMS](https://goldbrix.app/downloads/SHA256SUMS-v30-gbx-7.txt) · binaries also on [GitHub Releases](https://github.com/GOLDBRIX-GBX/goldbrix-core/releases/latest)
+- **Run a node:** [guide](https://goldbrix.app/run-node) · release checksums: [SHA256SUMS](https://goldbrix.app/downloads/SHA256SUMS-v31-gbx-launchpad.txt) · binaries also on [GitHub Releases](https://github.com/GOLDBRIX-GBX/goldbrix-core/releases/latest)
 
 ## Why GoldBrix
 
@@ -43,7 +43,7 @@ to the people who mine it and hold it. Honesty is enforced by code, not by trust
 | Ownership | Team / company | **No owner, no CEO** |
 | Admin key | Yes (can mint, pause, drain) | **None** |
 | Launch | Premine / presale to insiders | **Fair PoW from genesis** |
-| Fees | Paid to the team | **100% burned** |
+| Launchpad fees | Paid to the team | **100% burned** — L1 transaction fees go to miners, like any PoW chain |
 | Rug pull | Team removes liquidity | **Liquidity protocol-owned, locked by code — no withdraw function** |
 | Survival | Dies if team leaves | **Runs autonomously, self-heals** |
 
@@ -65,7 +65,7 @@ to the people who mine it and hold it. Honesty is enforced by code, not by trust
 Anyone can create a community token. The mechanics are designed to be fair and
 spam-resistant by construction:
 
-- **Creating a token is free.** The creator must only make the first buy, with a
+- **Creating a token costs work, not money.** The creator mines a small proof-of-work on their own device, then makes the first buy, with a
   small minimum, to prevent spam and bot-flooding.
 - **Every fee is burned — 100%.** Create, buy, sell, promote: each action burns
   GBX to a provably unspendable address. No fee ever reaches a person.
