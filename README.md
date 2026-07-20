@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="COPYING"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="contrib/guix"><img alt="Reproducible build" src="https://img.shields.io/badge/build-reproducible%20(Guix)-brightgreen.svg"></a>
   <a href="src/consensus"><img alt="Consensus" src="https://img.shields.io/badge/consensus-PoW%20SHA--256d-orange.svg"></a>
   <a href="src/chainparams.cpp"><img alt="Max supply" src="https://img.shields.io/badge/max%20supply-15%2C000%2C000%20GBX-yellow.svg"></a>
   <a href="https://explorer.goldbrix.app"><img alt="Fees" src="https://img.shields.io/badge/launchpad%20fees-100%25%20burned-red.svg"></a>
