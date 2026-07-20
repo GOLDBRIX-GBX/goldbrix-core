@@ -36,6 +36,47 @@ not because anyone promises it, but because **no one holds the keys to do it.**
 There is no founder allocation, no presale, no admin switch. The network belongs
 to the people who mine it and hold it. Honesty is enforced by code, not by trust.
 
+## How it works, end to end
+
+**On your phone or in any browser — no account, no permission, no signup:**
+
+1. **Create a wallet.** 12 words, generated and stored on your device only. No server ever holds them.
+2. **Forge a coin through work.** Your device mines a small, real proof-of-work (~1–3 minutes of hashing), then makes a first buy with a tiny minimum. That is the entire barrier: work, not money. The consensus itself verifies the proof — no gatekeeper can refuse you.
+3. **Trade on bonding curves.** Buys and sells run against an automatic x·y=k curve enforced by consensus (`src/consensus/`). Nobody sets the price; large trades move it progressively. A refund on an idle curve returns the full amount, with no fee — this rule lives in consensus, not in a promise.
+4. **Watch every fee burn.** Each launchpad action burns GBX to a provably unspendable address — anyone can sum the burns on the [explorer](https://explorer.goldbrix.app).
+5. **Graduation by depth, not hype.** When a coin's reserve reaches a threshold derived from its own trading activity, it graduates to an AMM with protocol-owned, code-locked liquidity.
+
+**On the network side — every role is open, none is required:**
+
+- **Mine GBX** with any SHA-256d miner, solo non-custodial: the coinbase pays your address directly, pool fee 0 — verify live at [/pool-info](https://goldbrix.app/pool-info), [mining guide](https://github.com/GOLDBRIX-GBX/goldbrix-tools/blob/main/docs/MINING.md).
+- **Run a node** with [one command](https://goldbrix.app/run-node); it serves a public read endpoint the wallets can use.
+- **Provide liquidity** for atomic GBX↔USDC swaps (HTLC): either both legs settle or both refund — [lp-box source](https://github.com/GOLDBRIX-GBX/goldbrix-tools/tree/main/lp-box).
+
+## Built for everyone — the same rules at every size
+
+Most markets quietly favor whoever arrives with the most money. GoldBrix applies
+one rulebook, in code:
+
+- **The same rule at every size.** The curve and the AMM both price by x·y=k on
+  real reserves: price impact grows with trade size — for everyone, identically.
+  No volume discounts, no private allocations, no early tiers, no special
+  treatment in any direction. A 10 GBX trade and a 100,000 GBX trade go through
+  the exact same formula.
+- **Pump-and-dump has no exit door.** Sell-side rate limits and per-address
+  volume caps scale with real liquidity ([lp-box](https://github.com/GOLDBRIX-GBX/goldbrix-tools/tree/main/lp-box)).
+  Graduation cannot be bought — it is derived from a coin's own sustained
+  activity, not from a spike.
+- **Nobody eats the small fish.** There are no insider allocations to dump on
+  late buyers, no team wallet, no fee stream feeding an operator. Every fee
+  burns; every participant — first or last, large or small — faces the same
+  curve, the same rules, the same code.
+- **Entry costs work, which everyone has.** Creating a coin takes minutes of
+  proof-of-work on your own phone — the one resource that cannot be bought
+  cheaper in bulk.
+
+None of this is a pledge. Each rule above is consensus or reviewable code —
+read it, rebuild it ([contrib/guix](contrib/guix), [checksums](https://goldbrix.app/downloads/SHA256SUMS-v31-gbx-launchpad.txt)), verify it.
+
 ## What makes it different
 
 | | Typical project | GoldBrix |
@@ -90,6 +131,16 @@ spam-resistant by construction:
 
 The test for every feature: *does it keep running if the founder disappears
 tomorrow?* If not, it is not ready.
+
+## A federation, not a server
+
+There is no central list of infrastructure. Nodes and liquidity providers announce
+themselves **on-chain** (`GBX:NODE`, `GBX:LP` records), and every wallet discovers
+them from the chain itself, cross-checking answers across multiple nodes
+([node-registry source](https://github.com/GOLDBRIX-GBX/goldbrix-tools/tree/main/node-registry)).
+When a node appears or disappears, nothing needs updating — the federation finds
+itself. The founder's servers are just nodes among nodes; the network does not
+know the difference.
 
 ## The endgame: no key
 
