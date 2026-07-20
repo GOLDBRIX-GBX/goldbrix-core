@@ -154,11 +154,11 @@ The `getbalances` RPC may be used to check the balance. Coins with `trusted` sta
 
 Unlike singlesig wallets, multisig wallets cannot create and sign transactions directly because they require the signatures of the co-signers. Instead they create a Partially Signed GoldBrix Transaction (PSBT).
 
-PSBT is a data format that allows wallets and other tools to exchange information about a GoldBrix transaction and the signatures necessary to complete it. [[source](https://bitcoinops.org/en/topics/psbt/)]
+PSBT is a data format that allows wallets and other tools to exchange information about a GoldBrix transaction and the signatures necessary to complete it.
 
 The current PSBT version (v0) is defined in [BIP 174](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki).
 
-For simplicity, the destination address is taken from the `participant_1` wallet in the code above, but it can be any valid bitcoin address.
+For simplicity, the destination address is taken from the `participant_1` wallet in the code above, but it can be any valid address.
 
 The `walletcreatefundedpsbt` RPC is used to create and fund a transaction in the PSBT format. It is the first step in creating the PSBT.
 
@@ -172,7 +172,7 @@ destination_addr=$(./build/bin/goldbrix-cli -signet -rpcwallet="participant_1" g
 funded_psbt=$(./build/bin/goldbrix-cli -signet -named -rpcwallet="multisig_wallet_01" walletcreatefundedpsbt outputs="{\"$destination_addr\": $amount}" | jq -r '.psbt')
 ```
 
-There is also the `createpsbt` RPC, which serves the same purpose, but it has no access to the wallet or to the UTXO set. It is functionally the same as `createrawtransaction` and just drops the raw transaction into an otherwise blank PSBT. [[source](https://bitcointalk.org/index.php?topic=5131043.msg50573609#msg50573609)] In most cases, `walletcreatefundedpsbt` solves the problem.
+There is also the `createpsbt` RPC, which serves the same purpose, but it has no access to the wallet or to the UTXO set. It is functionally the same as `createrawtransaction` and just drops the raw transaction into an otherwise blank PSBT. In most cases, `walletcreatefundedpsbt` solves the problem.
 
 The `send` RPC can also return a PSBT if more signatures are needed to sign the transaction.
 

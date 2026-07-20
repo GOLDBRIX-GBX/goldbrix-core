@@ -19,14 +19,14 @@ Specifying `-DENABLE_IPC=ON` requires [Cap'n Proto](https://capnproto.org/) to b
 Alternatively the [depends system](../depends) can be used to avoid needing to install local dependencies:
 
 ```
-cd <BITCOIN_SOURCE_DIRECTORY>
+cd <SOURCE_DIRECTORY>
 make -C depends NO_QT=1
 # Set host platform to output of gcc -dumpmachine or clang -dumpmachine or check the depends/ directory for the generated subdirectory name
 HOST_PLATFORM="x86_64-pc-linux-gnu"
 cmake -B build --toolchain=depends/$HOST_PLATFORM/toolchain.cmake
 cmake --build build
 build/bin/goldbrix -m node -regtest -printtoconsole -debug=ipc
-BITCOIN_CMD="bitcoin -m" build/test/functional/test_runner.py
+BITCOIN_CMD="goldbrix -m" build/test/functional/test_runner.py
 ```
 
 The `cmake` build will pick up settings and library locations from the depends directory, so there is no need to pass `-DENABLE_IPC=ON` as a separate flag when using the depends system (it's controlled by the `NO_IPC=1` option).
@@ -37,11 +37,11 @@ When cross-compiling and not using depends, native code generation tools from [l
 
 ### External libmultiprocess installation
 
-By default when `-DENABLE_IPC=ON` is enabled, the libmultiprocess sources at [../src/ipc/libmultiprocess/](../src/ipc/libmultiprocess/) are built as part of the bitcoin cmake build, but alternately an external [libmultiprocess](https://github.com/bitcoin-core/libmultiprocess/) cmake package can be used instead by following its [installation instructions](https://github.com/bitcoin-core/libmultiprocess/blob/master/doc/install.md) and specifying `-DWITH_EXTERNAL_LIBMULTIPROCESS=ON` to the bitcoin build, so it will use the external package instead of the sources. This can be useful when making changes to the upstream project. If libmultiprocess is not installed in a default system location it is possible to specify the [`CMAKE_PREFIX_PATH`](https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html) environment variable to point to the installation prefix where libmultiprocess is installed.
+By default when `-DENABLE_IPC=ON` is enabled, the libmultiprocess sources at [../src/ipc/libmultiprocess/](../src/ipc/libmultiprocess/) are built as part of the cmake build, but alternately an external [libmultiprocess](https://github.com/bitcoin-core/libmultiprocess/) cmake package can be used instead by following its [installation instructions](https://github.com/bitcoin-core/libmultiprocess/blob/master/doc/install.md) and specifying `-DWITH_EXTERNAL_LIBMULTIPROCESS=ON` to the build, so it will use the external package instead of the sources. This can be useful when making changes to the upstream project. If libmultiprocess is not installed in a default system location it is possible to specify the [`CMAKE_PREFIX_PATH`](https://cmake.org/cmake/help/latest/envvar/CMAKE_PREFIX_PATH.html) environment variable to point to the installation prefix where libmultiprocess is installed.
 
 ## Usage
 
-Recommended way to use multiprocess binaries is to invoke `bitcoin` CLI like `bitcoin -m node -debug=ipc` or `bitcoin -m gui -printtoconsole -debug=ipc`.
+Recommended way to use multiprocess binaries is to invoke the `goldbrix` CLI like `goldbrix -m node -debug=ipc` or `goldbrix -m gui -printtoconsole -debug=ipc`.
 
 When the `-m` (`--multiprocess`) option is used the `bitcoin` command will execute multiprocess binaries instead of monolithic ones (`goldbrix-node` instead of `goldbrixd`, and `goldbrix-gui` instead of `goldbrix-qt`). The multiprocess binaries can also be invoked directly, but this is not recommended as they may change or be renamed in the future, and they are not installed in the PATH.
 

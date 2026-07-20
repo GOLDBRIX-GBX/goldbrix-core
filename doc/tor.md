@@ -1,4 +1,4 @@
-# TOR SUPPORT IN BITCOIN
+# TOR SUPPORT IN GOLDBRIX
 
 It is possible to run GoldBrix as a Tor onion service, and connect to such services.
 
@@ -179,17 +179,17 @@ details).
 You can also manually configure your node to be reachable from the Tor network.
 Add these lines to your `/etc/tor/torrc` (or equivalent config file):
 
-    HiddenServiceDir /var/lib/tor/bitcoin-service/
+    HiddenServiceDir /var/lib/tor/goldbrix-service/
     HiddenServicePort 8333 127.0.0.1:8334
 
 The directory can be different of course, but virtual port numbers should be equal to
 your goldbrixd's P2P listen port (8333 by default), and target addresses and ports
 should be equal to binding address and port for inbound Tor connections (127.0.0.1:8334 by default).
 
-    -externalip=X   You can tell bitcoin about its publicly reachable addresses using
+    -externalip=X   You can tell goldbrixd about its publicly reachable addresses using
                     this option, and this can be an onion address. Given the above
                     configuration, you can find your onion address in
-                    /var/lib/tor/bitcoin-service/hostname. For connections
+                    /var/lib/tor/goldbrix-service/hostname. For connections
                     coming from unroutable addresses (such as 127.0.0.1, where the
                     Tor proxy typically runs), onion addresses are given
                     preference for your node to advertise itself with.

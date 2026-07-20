@@ -13,7 +13,7 @@ can be found in the contrib/init folder.
 Service User
 ---------------------------------
 
-All three Linux startup configurations assume the existence of a "bitcoin" user
+All three Linux startup configurations assume the existence of a "goldbrix" user
 and group.  They must be created before attempting to use these scripts.
 The macOS configuration assumes goldbrixd will be set up for the current user.
 
@@ -56,32 +56,32 @@ Paths
 All three configurations assume several paths that might need to be adjusted.
 
     Binary:              /usr/bin/goldbrixd
-    Configuration file:  /etc/bitcoin/goldbrix.conf
+    Configuration file:  /etc/goldbrix/goldbrix.conf
     Data directory:      /var/lib/goldbrixd
     PID file:            /var/run/goldbrixd/goldbrixd.pid (OpenRC and Upstart) or
                          /run/goldbrixd/goldbrixd.pid (systemd)
     Lock file:           /var/lock/subsys/goldbrixd (CentOS)
 
 The PID directory (if applicable) and data directory should both be owned by the
-bitcoin user and group. It is advised for security reasons to make the
-configuration file and data directory only readable by the bitcoin user and
+goldbrix user and group. It is advised for security reasons to make the
+configuration file and data directory only readable by the goldbrix user and
 group. Access to goldbrix-cli and other goldbrixd rpc clients can then be
 controlled by group membership.
 
 NOTE: When using the systemd .service file, the creation of the aforementioned
 directories and the setting of their permissions is automatically handled by
-systemd. Directories are given a permission of 710, giving the bitcoin group
+systemd. Directories are given a permission of 710, giving the goldbrix group
 access to files under it _if_ the files themselves give permission to the
-bitcoin group to do so. This does not allow
+goldbrix group to do so. This does not allow
 for the listing of files under the directory.
 
 NOTE: It is not currently possible to override `datadir` in
-`/etc/bitcoin/goldbrix.conf` with the current systemd, OpenRC, and Upstart init
+`/etc/goldbrix/goldbrix.conf` with the current systemd, OpenRC, and Upstart init
 files out-of-the-box. This is because the command line options specified in the
 init files take precedence over the configurations in
-`/etc/bitcoin/goldbrix.conf`. However, some init systems have their own
+`/etc/goldbrix/goldbrix.conf`. However, some init systems have their own
 configuration mechanisms that would allow for overriding the command line
-options specified in the init files (e.g. setting `BITCOIND_DATADIR` for
+options specified in the init files (e.g. setting `GOLDBRIXD_DATADIR` for
 OpenRC).
 
 ### macOS
@@ -127,19 +127,19 @@ use old versions of Upstart and do not supply the start-stop-daemon utility.
 Copy goldbrixd.init to /etc/init.d/goldbrixd. Test by running `service goldbrixd start`.
 
 Using this script, you can adjust the path and flags to the goldbrixd program by
-setting the BITCOIND and FLAGS environment variables in the file
+setting the GOLDBRIXD and FLAGS environment variables in the file
 /etc/sysconfig/goldbrixd. You can also use the DAEMONOPTS environment variable here.
 
 ### macOS
 
-Copy org.bitcoin.goldbrixd.plist into ~/Library/LaunchAgents. Load the launch agent by
-running `launchctl load ~/Library/LaunchAgents/org.bitcoin.goldbrixd.plist`.
+Copy org.goldbrix.goldbrixd.plist into ~/Library/LaunchAgents. Load the launch agent by
+running `launchctl load ~/Library/LaunchAgents/org.goldbrix.goldbrixd.plist`.
 
 This Launch Agent will cause goldbrixd to start whenever the user logs in.
 
 NOTE: This approach is intended for those wanting to run goldbrixd as the current user.
-You will need to modify org.bitcoin.goldbrixd.plist if you intend to use it as a
-Launch Daemon with a dedicated bitcoin user.
+You will need to modify org.goldbrix.goldbrixd.plist if you intend to use it as a
+Launch Daemon with a dedicated goldbrix user.
 
 Auto-respawn
 -----------------------------------

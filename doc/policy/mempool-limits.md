@@ -39,7 +39,7 @@ of the following conditions are met:
 
 *Rationale*: this rule was introduced to prevent pinning by domination of a transaction's descendant
 limits in two-party contract protocols such as LN.  Also see the [mailing list
-post](https://lists.linuxfoundation.org/pipermail/bitcoin-dev/2018-November/016518.html).
+post.
 
 This rule was introduced in [PR #15681](https://github.com/GOLDBRIX-GBX/goldbrix-core/pull/15681).
 
