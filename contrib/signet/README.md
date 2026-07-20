@@ -1,6 +1,6 @@
 Contents
 ========
-This directory contains tools related to Signet, both for running a Signet yourself and for using one.
+This directory contains tools related to Signet, a local test network: how to run one yourself and how to use it.
 
 getcoins.py
 ===========
