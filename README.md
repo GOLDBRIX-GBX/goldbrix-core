@@ -11,10 +11,10 @@
 </p>
 
 <p align="center">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg">
-  <img alt="Consensus" src="https://img.shields.io/badge/consensus-PoW%20SHA--256d-orange.svg">
-  <img alt="Max supply" src="https://img.shields.io/badge/max%20supply-15%2C000%2C000%20GBX-yellow.svg">
-  <img alt="Fees" src="https://img.shields.io/badge/launchpad%20fees-100%25%20burned-red.svg">
+  <a href="COPYING"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+  <a href="src/consensus"><img alt="Consensus" src="https://img.shields.io/badge/consensus-PoW%20SHA--256d-orange.svg"></a>
+  <a href="src/chainparams.cpp"><img alt="Max supply" src="https://img.shields.io/badge/max%20supply-15%2C000%2C000%20GBX-yellow.svg"></a>
+  <a href="https://explorer.goldbrix.app"><img alt="Fees" src="https://img.shields.io/badge/launchpad%20fees-100%25%20burned-red.svg"></a>
 </p>
 
 ---
