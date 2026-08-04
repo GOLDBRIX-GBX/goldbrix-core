@@ -198,9 +198,15 @@ LogPrintf("  hashMerkleRoot   = %s\n", genesis.hashMerkleRoot.ToString());
         // This is fine at runtime as we'll fall back to using them as an addrfetch if they don't support the
         // service bits we want, but we should get them updated to support all service bits wanted by any
         // release ASAP to avoid it where possible.
-        vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_main), std::end(chainparams_seed_main)); // GOLDBRIX: S1+S2 fixed seeds
+        vFixedSeeds = std::vector<uint8_t>(std::begin(chainparams_seed_main), std::end(chainparams_seed_main)); // GOLDBRIX: federation citizen nodes
         vSeeds.clear();
-        vSeeds.emplace_back("seed.goldbrix.app."); // GOLDBRIX mainnet DNS seed
+        vSeeds.emplace_back("seed.goldbrix.app."); // GOLDBRIX mainnet DNS seed (federation-held domain)
+        // Bootstrap does not depend on any single party: the operating citizen
+        // nodes are asked directly, and the on-chain node registry takes over
+        // from the first connection.
+        vSeeds.emplace_back("155.117.232.248");
+        vSeeds.emplace_back("207.180.227.163");
+        vSeeds.emplace_back("169.58.61.71");
 
 base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1, 25); // B...
 base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1, 63); // S....
@@ -436,7 +442,7 @@ base58Prefixes[SECRET_KEY]     = std::vector<unsigned char>(1, 68);  // WIF star
         base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
 
-        bech32_hrp = "bn";
+        bech32_hrp = "tbn"; // GOLDBRIX: testnet4 addresses are visibly not mainnet
 
         vFixedSeeds.clear();
 
@@ -528,7 +534,7 @@ public:
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x88, 0xAD, 0xE4};
 
         // HRP-ul tău
-        bech32_hrp = "bn";
+        bech32_hrp = "tbn"; // GOLDBRIX: signet addresses are visibly not mainnet
 
         fDefaultConsistencyChecks = false;
         m_is_mockable_chain = false;
@@ -711,7 +717,7 @@ assert(genesis.hashMerkleRoot == exp_merkle);
         base58Prefixes[EXT_PUBLIC_KEY] = {0x04, 0x35, 0x87, 0xCF};
         base58Prefixes[EXT_SECRET_KEY] = {0x04, 0x35, 0x83, 0x94};
 
-        bech32_hrp = "bn";
+        bech32_hrp = "bnrt"; // GOLDBRIX: regtest addresses are visibly not mainnet
     }
 };
 
