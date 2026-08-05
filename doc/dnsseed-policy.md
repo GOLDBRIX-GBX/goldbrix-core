@@ -12,7 +12,15 @@ document establishes some basic expectations for operating dnsseeds.
 
 0. A DNS seed operating organization or person is expected to follow good
 host security practices, maintain control of applicable infrastructure,
-and not sell or transfer control of the DNS seed. Any hosting services
+and not sell or transfer control of the DNS seed.
+
+Note (GOLDBRIX): seed control follows the domain. The goldbrix.app domain
+itself passes to an independent federation node operator at the founder's
+exit; from that point the DNS seed is theirs to operate under this same
+policy. Additional DNS seeds run by other federation operators on their
+own domains are welcome and remove any single-registrant dependency —
+hardcoded fixed seeds and the on-chain node registry cover bootstrap
+regardless of DNS. Any hosting services
 contracted by the operator are equally expected to uphold these expectations.
 
 1. The DNS seed results must consist exclusively of fairly selected and
